@@ -29,14 +29,35 @@ const getAuthHeaders = () => {
 const fetchTmdb = async <T>(path: string, options: FetchOptions = {}) => {
 	const query = buildQuery(options.params);
 	const url = query ? `${API_BASE_URL}${path}?${query}` : `${API_BASE_URL}${path}`;
+	const startedAt = Date.now();
+	console.info("[TMDB] Request", {
+		path,
+		url,
+		query: options.params ?? {},
+		revalidateSeconds: options.cacheSeconds ?? 3600,
+	});
 
 	const response = await fetch(url, {
 		headers: getAuthHeaders(),
 		next: { revalidate: options.cacheSeconds ?? 3600 },
 	});
+	console.info("[TMDB] Response", {
+		path,
+		url,
+		status: response.status,
+		ok: response.ok,
+		durationMs: Date.now() - startedAt,
+	});
 
 	if (!response.ok) {
 		const errorText = await response.text();
+		console.error("[TMDB] Error", {
+			path,
+			url,
+			status: response.status,
+			durationMs: Date.now() - startedAt,
+			errorText,
+		});
 		throw new Error(`TMDB request failed (${response.status}): ${errorText}`);
 	}
 
@@ -59,6 +80,7 @@ export type TmdbListItem = {
 	title?: string;
 	name?: string;
 	vote_average?: number;
+	popularity?: number;
 	release_date?: string;
 	first_air_date?: string;
 	genre_ids?: number[];
@@ -79,6 +101,11 @@ export type TmdbMultiResult = {
 	title?: string;
 	name?: string;
 	vote_average?: number;
+	vote_count?: number;
+	popularity?: number;
+	overview?: string;
+	poster_path?: string;
+	backdrop_path?: string;
 	release_date?: string;
 	first_air_date?: string;
 };
@@ -93,6 +120,10 @@ export type TmdbMultiResponse = {
 export type TmdbGenre = {
 	id: number;
 	name: string;
+};
+
+export type TmdbGenreResponse = {
+	genres: TmdbGenre[];
 };
 
 export type TmdbImage = {
@@ -185,6 +216,65 @@ export type TmdbCredits = {
 	}>;
 };
 
+export type TmdbPersonKnownFor = {
+	id: number;
+	media_type?: "movie" | "tv";
+	title?: string;
+	name?: string;
+	release_date?: string;
+	first_air_date?: string;
+};
+
+export type TmdbPerson = {
+	id: number;
+	name: string;
+	known_for_department?: string;
+	popularity?: number;
+	profile_path?: string;
+	known_for?: TmdbPersonKnownFor[];
+};
+
+export type TmdbPersonCredit = {
+	id: number;
+	media_type?: "movie" | "tv";
+	title?: string;
+	name?: string;
+	poster_path?: string;
+	backdrop_path?: string;
+	character?: string;
+	job?: string;
+	release_date?: string;
+	first_air_date?: string;
+	vote_average?: number;
+};
+
+export type TmdbPersonDetails = {
+	id: number;
+	name: string;
+	biography?: string;
+	birthday?: string;
+	deathday?: string | null;
+	place_of_birth?: string;
+	known_for_department?: string;
+	popularity?: number;
+	profile_path?: string;
+	also_known_as?: string[];
+	images?: {
+		profiles?: TmdbImage[];
+	};
+	combined_credits?: {
+		cast?: TmdbPersonCredit[];
+		crew?: TmdbPersonCredit[];
+	};
+};
+
+export type TmdbPeopleResponse = {
+	page: number;
+	results: TmdbPerson[];
+	total_pages: number;
+	total_results: number;
+};
+
 export const getTrendingMovies = (language = "pt-BR") =>
 	fetchTmdb<TmdbTrendingResponse>("/trending/movie/week", {
 		params: { language },
@@ -218,15 +308,79 @@ export const getTopRatedMovies = (language = "pt-BR") =>
 		cacheSeconds: 1800,
 	});
 
+export const getTopRatedTv = (language = "pt-BR") =>
+	fetchTmdb<TmdbListResponse>("/tv/top_rated", {
+		params: { language },
+		cacheSeconds: 1800,
+	});
+
+export const getPopularPeople = (language = "pt-BR", page = 1) =>
+	fetchTmdb<TmdbPeopleResponse>("/person/popular", {
+		params: { language, page },
+		cacheSeconds: 1800,
+	});
+
+export const getPersonDetails = (id: number, language = "pt-BR") =>
+	fetchTmdb<TmdbPersonDetails>(`/person/${id}`, {
+		params: {
+			language,
+			append_to_response: "combined_credits,images",
+			include_image_language: `${language},en,null`,
+		},
+		cacheSeconds: 1800,
+	});
+
+export const getGenres = (mediaType: "movie" | "tv", language = "pt-BR") =>
+	fetchTmdb<TmdbGenreResponse>(`/genre/${mediaType}/list`, {
+		params: { language },
+		cacheSeconds: 86400,
+	});
+
+export const discoverTitles = (
+	mediaType: "movie" | "tv",
+	params: {
+		language?: string;
+		genreId?: number;
+		minRating?: number;
+		minYear?: number;
+		page?: number;
+	}
+) => {
+	const query: Record<string, string | number | boolean | undefined> = {
+		language: params.language ?? "pt-BR",
+		sort_by: "popularity.desc",
+		include_adult: false,
+		"vote_average.gte": params.minRating,
+		page: params.page ?? 1,
+	};
+
+	if (params.genreId) {
+		query.with_genres = params.genreId;
+	}
+
+	if (params.minYear) {
+		if (mediaType === "movie") {
+			query["primary_release_date.gte"] = `${params.minYear}-01-01`;
+		} else {
+			query["first_air_date.gte"] = `${params.minYear}-01-01`;
+		}
+	}
+
+	return fetchTmdb<TmdbListResponse>(`/discover/${mediaType}`, {
+		params: query,
+		cacheSeconds: 900,
+	});
+};
+
 export const getMovieCredits = (id: number, language = "pt-BR") =>
 	fetchTmdb<TmdbCredits>(`/movie/${id}/credits`, {
 		params: { language },
 		cacheSeconds: 1800,
 	});
 
-export const searchMulti = (query: string, language = "pt-BR") =>
+export const searchMulti = (query: string, language = "pt-BR", page = 1) =>
 	fetchTmdb<TmdbMultiResponse>("/search/multi", {
-		params: { query, language, include_adult: false },
+		params: { query, language, page, include_adult: false },
 		cacheSeconds: 300,
 	});
 

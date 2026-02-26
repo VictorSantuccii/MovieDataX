@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Montserrat, Poppins } from "next/font/google";
+import Footer from "@/components/footer";
+import SidebarMenu from "@/components/sidebar-menu";
+import ThemeToggle from "@/components/theme-toggle";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -14,9 +17,14 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "MovieDataX",
+  title: "MovieDataX - Explore o Universo do Cinema",
   description:
-    "Sua central rapida e inteligente para explorar filmes, detalhes, avaliacoes e tudo que importa no universo do cinema.",
+    "Sua central rápida e inteligente para explorar filmes, detalhes, avaliações e tudo que importa no universo do cinema.",
+  icons: {
+    icon: "/icone.png",
+    shortcut: "/icone.png",
+    apple: "/icone.png",
+  },
 };
 
 export default function RootLayout({
@@ -25,9 +33,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="pt-BR" data-theme="dark">
       <body className={`${montserrat.variable} ${poppins.variable} antialiased`}>
+        <SidebarMenu />
+        <ThemeToggle />
         {children}
+        <Footer />
       </body>
     </html>
   );
