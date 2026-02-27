@@ -45,7 +45,7 @@ export default function SidebarMenu() {
 				type="button"
 				onClick={() => setOpen(true)}
 				aria-label="Abrir menu"
-				className="fixed left-3 top-3 z-70 inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/45 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/90 shadow-lg shadow-black/40 backdrop-blur-md transition hover:border-rose-300/70 hover:text-rose-200 sm:left-4 sm:top-4 sm:px-4 sm:text-xs"
+				className="app-floating-button fixed left-3 top-3 z-70 inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/45 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/90 shadow-lg shadow-black/40 backdrop-blur-md transition hover:border-rose-300/70 hover:text-rose-200 sm:left-4 sm:top-4 sm:px-4 sm:text-xs"
 			>
 				<Menu className="h-4 w-4" />
 				Menu
@@ -56,11 +56,11 @@ export default function SidebarMenu() {
 					<button
 						type="button"
 						onClick={() => setOpen(false)}
-						className="absolute inset-0 bg-black/70 backdrop-blur-[1px]"
+						className="app-sidebar-overlay absolute inset-0 bg-black/70 backdrop-blur-[1px]"
 						aria-label="Fechar menu"
 					/>
 
-					<aside className="absolute left-0 top-0 h-full w-[88vw] max-w-sm border-r border-white/10 bg-[#0b0d14] p-5 shadow-2xl shadow-black/60">
+					<aside className="app-sidebar-panel absolute left-0 top-0 h-full w-[88vw] max-w-sm border-r border-white/10 bg-[#0b0d14] p-5 shadow-2xl shadow-black/60">
 						<div className="mb-6 flex items-center justify-between">
 							<div>
 								<p className="text-xs font-semibold uppercase tracking-[0.3em] text-rose-200">Navegação</p>
@@ -86,7 +86,7 @@ export default function SidebarMenu() {
 										onClick={() => setOpen(false)}
 										className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition ${
 											item.active
-												? "border border-rose-300/40 bg-rose-500/20 text-rose-100"
+												? "app-nav-active border border-rose-300/40 bg-rose-500/20 text-rose-100"
 												: "border border-white/10 bg-white/5 text-white/75 hover:text-white"
 										}`}
 									>

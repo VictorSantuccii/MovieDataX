@@ -573,7 +573,7 @@ export default function Home() {
 											className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 transition hover:-translate-y-1 hover:border-rose-300/50"
 											variants={item}
 										>
-										<div className="relative aspect-2/3 bg-white/10">
+										<div className="app-poster-frame relative aspect-2/3 bg-white/10">
 											{poster ? (
 												<Image
 													alt={name}
@@ -588,17 +588,17 @@ export default function Home() {
 												</div>
 											)}
 										</div>
-										<div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/30 to-transparent" />
+										<div className="app-poster-overlay absolute inset-0 bg-linear-to-t from-black/90 via-black/30 to-transparent" />
 										<div className="absolute bottom-0 left-0 right-0 p-4">
 											<p className="text-sm font-semibold text-white">{name}</p>
 											<div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-white/70">
-												<span className="rounded-full bg-white/10 px-2 py-1">
+												<span className="app-poster-chip rounded-full bg-white/10 px-2 py-1">
 													{year}
 												</span>
-												<span className="rounded-full bg-white/10 px-2 py-1">
+												<span className="app-poster-chip rounded-full bg-white/10 px-2 py-1">
 													{type === "movie" ? "Filme" : "Série"}
 												</span>
-												<span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1">
+												<span className="app-poster-chip inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1">
 													<Star className="h-3 w-3" />
 													{titleItem.vote_average?.toFixed(1) ?? "-"}
 												</span>
@@ -652,7 +652,7 @@ export default function Home() {
 											className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 transition hover:-translate-y-1 hover:border-rose-300/50"
 											variants={item}
 										>
-										<div className="relative aspect-2/3 bg-white/10">
+										<div className="app-poster-frame relative aspect-2/3 bg-white/10">
 											{poster ? (
 												<Image
 													alt={name}
@@ -667,17 +667,17 @@ export default function Home() {
 												</div>
 											)}
 										</div>
-										<div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/30 to-transparent" />
+										<div className="app-poster-overlay absolute inset-0 bg-linear-to-t from-black/90 via-black/30 to-transparent" />
 										<div className="absolute bottom-0 left-0 right-0 p-4">
 											<p className="text-sm font-semibold text-white">{name}</p>
 											<div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-white/70">
-												<span className="rounded-full bg-white/10 px-2 py-1">
+												<span className="app-poster-chip rounded-full bg-white/10 px-2 py-1">
 													{year}
 												</span>
-												<span className="rounded-full bg-white/10 px-2 py-1">
+												<span className="app-poster-chip rounded-full bg-white/10 px-2 py-1">
 													{type === "movie" ? "Filme" : "Série"}
 												</span>
-												<span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1">
+												<span className="app-poster-chip inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1">
 													<Star className="h-3 w-3" />
 													{titleItem.vote_average?.toFixed(1) ?? "-"}
 												</span>
@@ -730,7 +730,7 @@ export default function Home() {
 											className="flex gap-4 rounded-3xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-1 hover:border-rose-300/50"
 											variants={item}
 										>
-										<div className="relative h-32 w-24 overflow-hidden rounded-2xl bg-white/10">
+										<div className="app-poster-frame relative h-32 w-24 overflow-hidden rounded-2xl bg-white/10">
 											{poster ? (
 												<Image
 													alt={name}
@@ -795,7 +795,7 @@ export default function Home() {
 											className="flex gap-4 rounded-3xl border border-white/10 bg-white/5 p-5 transition hover:-translate-y-1 hover:border-rose-300/50"
 											variants={item}
 										>
-										<div className="relative h-32 w-24 overflow-hidden rounded-2xl bg-white/10">
+										<div className="app-poster-frame relative h-32 w-24 overflow-hidden rounded-2xl bg-white/10">
 											{poster ? (
 												<Image
 													alt={entry.title}
@@ -868,7 +868,7 @@ export default function Home() {
 											variants={item}
 										>
 										<div className="flex gap-4">
-											<div className="relative h-32 w-24 overflow-hidden rounded-2xl bg-white/10">
+											<div className="app-poster-frame relative h-32 w-24 overflow-hidden rounded-2xl bg-white/10">
 												{profile ? (
 													<Image
 														alt={person.name}

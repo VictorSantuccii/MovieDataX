@@ -54,8 +54,8 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 
 	if (!Number.isFinite(id) || id <= 0) {
 		return (
-			<main className="min-h-screen bg-[#0b0b0f] px-6 py-16 text-white sm:px-10 lg:px-16">
-				<div className="mx-auto max-w-4xl rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/70">
+			<main className="app-title-page min-h-screen bg-[#0b0b0f] px-6 py-16 text-white sm:px-10 lg:px-16">
+				<div className="app-title-empty mx-auto max-w-4xl rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/70">
 					ID inválido.
 				</div>
 			</main>
@@ -114,37 +114,37 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 		];
 
 		return (
-			<main className="min-h-screen bg-[#0b0b0f] text-white">
+			<main className="app-title-page min-h-screen bg-[#0b0b0f] text-white">
 				<section className="relative overflow-hidden px-6 pb-10 pt-16 sm:px-10 lg:px-16">
-					<div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#2b1a1a,transparent_55%),radial-gradient(circle_at_20%_30%,#2b1f0a,transparent_55%),radial-gradient(circle_at_80%_10%,#11202f,transparent_45%),linear-gradient(180deg,#0b0b0f_0%,#0f111a_40%,#111827_100%)]" />
+					<div className="app-title-hero-bg absolute inset-0 bg-[radial-gradient(circle_at_top,#2b1a1a,transparent_55%),radial-gradient(circle_at_20%_30%,#2b1f0a,transparent_55%),radial-gradient(circle_at_80%_10%,#11202f,transparent_45%),linear-gradient(180deg,#0b0b0f_0%,#0f111a_40%,#111827_100%)]" />
 					{backdrop && (
 						<Image
 							alt={name}
 							src={backdrop}
 							fill
 							sizes="100vw"
-							className="object-cover opacity-25"
+							className="app-title-backdrop object-cover opacity-25"
 						/>
 					)}
-					<div className="absolute inset-0 bg-linear-to-b from-black/65 via-black/55 to-[#0b0b0f]" />
+					<div className="app-title-hero-overlay absolute inset-0 bg-linear-to-b from-black/65 via-black/55 to-[#0b0b0f]" />
 
 					<div className="relative mx-auto grid max-w-6xl gap-8 lg:grid-cols-[260px_1fr]">
 						<div>
 							<Link
 								href={`/titles?${listBaseQuery}`}
-								className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/35 px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-white/80 transition hover:text-white"
+								className="app-title-pill mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/35 px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-white/80 transition hover:text-white"
 							>
 								<ArrowLeft className="h-4 w-4" />
 								Voltar
 							</Link>
-							<div className="relative h-96 overflow-hidden rounded-2xl border border-white/15 bg-white/5 shadow-2xl shadow-black/50">
+							<div className="app-title-poster-shell relative h-96 overflow-hidden rounded-2xl border border-white/15 bg-white/5 shadow-2xl shadow-black/50">
 								{poster ? (
 									<Image
 										alt={name}
 										src={poster}
 										fill
 										sizes="260px"
-										className="object-cover"
+										className="app-title-poster-image object-cover"
 									/>
 								) : (
 									<div className="flex h-full items-center justify-center text-sm text-white/70">
@@ -162,7 +162,7 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 									{genres.map((genre) => (
 										<span
 											key={genre.id}
-											className="rounded-full border border-white/15 bg-black/30 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-rose-200"
+											className="app-title-chip rounded-full border border-white/15 bg-black/30 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-rose-200"
 										>
 											{genre.name}
 										</span>
@@ -174,7 +174,7 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 								{infoItems.map((info) => (
 									<div
 										key={info.label}
-										className="rounded-xl border border-white/10 bg-black/30 px-3 py-3"
+										className="app-title-info-card rounded-xl border border-white/10 bg-black/30 px-3 py-3"
 									>
 										<p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/50">
 											{info.label}
@@ -184,7 +184,7 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 								))}
 							</div>
 
-							<div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+							<div className="app-title-synopsis rounded-2xl border border-white/10 bg-black/30 p-4">
 								<p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-200">
 									Sinopse
 								</p>
@@ -197,19 +197,19 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 								{previousId ? (
 									<Link
 										href={`/title/${mediaType}/${previousId}?${listBaseQuery}`}
-										className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/80 hover:text-white"
+										className="app-title-pill inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/80 hover:text-white"
 									>
 										<ChevronLeft className="h-4 w-4" />
 										Anterior
 									</Link>
 								) : (
-									<span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/40">
+									<span className="app-title-pill-disabled inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/40">
 										<ChevronLeft className="h-4 w-4" />
 										Anterior
 									</span>
 								)}
 
-								<span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/80">
+								<span className="app-title-pill app-title-rating inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/80">
 									<Star className="h-4 w-4 text-amber-300" />
 									{details.vote_average?.toFixed(1) ?? "-"}
 								</span>
@@ -217,13 +217,13 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 								{nextId ? (
 									<Link
 										href={`/title/${mediaType}/${nextId}?${listBaseQuery}`}
-										className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/80 hover:text-white"
+										className="app-title-pill inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/80 hover:text-white"
 									>
 										Próximo
 										<ChevronRight className="h-4 w-4" />
 									</Link>
 								) : (
-									<span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/40">
+									<span className="app-title-pill-disabled inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/40">
 										Próximo
 										<ChevronRight className="h-4 w-4" />
 									</span>
@@ -234,7 +234,7 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 										href={`https://www.youtube.com/watch?v=${trailer.key}`}
 										target="_blank"
 										rel="noreferrer"
-										className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/80 hover:text-white"
+										className="app-title-pill inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/80 hover:text-white"
 									>
 										<Play className="h-4 w-4 text-rose-300" />
 										Ver trailer
@@ -245,7 +245,7 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 										href={details.homepage}
 										target="_blank"
 										rel="noreferrer"
-										className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/80 hover:text-white"
+										className="app-title-pill inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/80 hover:text-white"
 									>
 										Site oficial
 									</Link>
@@ -257,7 +257,7 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 
 				<section className="px-6 pb-20 sm:px-10 lg:px-16">
 					<div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-2">
-						<div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+						<div className="app-title-panel rounded-2xl border border-white/10 bg-white/5 p-5">
 							<p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-200">
 								Elenco principal
 							</p>
@@ -266,7 +266,7 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 									cast.map((member) => (
 										<div
 											key={member.id}
-											className="rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-sm"
+											className="app-title-row rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-sm"
 										>
 											<span className="font-semibold text-white">{member.name}</span>
 											<span className="text-white/70"> {member.character ? `• ${member.character}` : ""}</span>
@@ -278,11 +278,11 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 							</div>
 						</div>
 
-						<div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+						<div className="app-title-panel rounded-2xl border border-white/10 bg-white/5 p-5">
 							<p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-200">
 								Reviews
 							</p>
-							<p className="mt-1 text-xs text-white/60">
+							<p className="mt-1 text-xs text-whjite/60">
 								Total: {reviews.total_results?.toLocaleString("pt-BR") ?? 0}
 							</p>
 							<div className="mt-4 grid gap-3">
@@ -290,7 +290,7 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 									reviewItems.map((review) => (
 										<div
 											key={review.id}
-											className="rounded-lg border border-white/10 bg-black/25 px-3 py-3"
+											className="app-title-row rounded-lg border border-white/10 bg-black/25 px-3 py-3"
 										>
 											<p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
 												{review.author}
@@ -311,8 +311,8 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 		);
 	} catch {
 		return (
-			<main className="min-h-screen bg-[#0b0b0f] px-6 py-16 text-white sm:px-10 lg:px-16">
-				<div className="mx-auto max-w-4xl rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/70">
+			<main className="app-title-page min-h-screen bg-[#0b0b0f] px-6 py-16 text-white sm:px-10 lg:px-16">
+				<div className="app-title-empty mx-auto max-w-4xl rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/70">
 					Não foi possível carregar os detalhes do título.
 				</div>
 			</main>

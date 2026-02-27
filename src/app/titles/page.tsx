@@ -526,20 +526,20 @@ function TitlesPageContent() {
 								return (
 									<div
 										key={entry.id}
-										className="group overflow-hidden rounded-2xl border border-white/15 bg-slate-900/90 shadow-lg shadow-black/30 ring-1 ring-white/10 transition duration-300 hover:-translate-y-1 hover:border-rose-300/60 hover:shadow-2xl hover:shadow-rose-900/20"
+										className="app-category-card group overflow-hidden rounded-2xl border border-white/15 bg-slate-900/90 shadow-lg shadow-black/30 ring-1 ring-white/10 transition duration-300 hover:-translate-y-1 hover:border-rose-300/60 hover:shadow-2xl hover:shadow-rose-900/20"
 									>
 										<Link
 											href={`/title/${mediaType}/${entry.id}?type=${mediaType}&genre=${selectedGenreId ?? ""}&page=${page}`}
 											className="block"
 										>
-											<div className="relative h-72 bg-slate-800 sm:h-80 lg:h-72">
+											<div className="app-category-poster relative h-72 bg-slate-800 sm:h-80 lg:h-72">
 											{poster ? (
 												<Image
 													alt={name}
 													src={poster}
 													fill
 													sizes="(min-width: 1024px) 16rem, (min-width: 640px) 40vw, 70vw"
-													className="object-cover"
+													className="app-category-poster-image object-cover"
 													onLoad={() => {
 														if (index < 3) {
 															console.info("[UI][titles] image.load", {
@@ -556,7 +556,7 @@ function TitlesPageContent() {
 													}}
 												/>
 											) : (
-												<div className="flex h-full items-center justify-center text-xs text-white/70">
+												<div className="app-category-empty-poster flex h-full items-center justify-center text-xs text-white/70">
 													Poster indisponível
 												</div>
 											)}
@@ -564,16 +564,16 @@ function TitlesPageContent() {
 											<div className="space-y-3 p-4">
 												<p className="line-clamp-2 min-h-10 text-base font-semibold text-white">{name}</p>
 												<div className="flex flex-wrap items-center gap-2 text-xs text-white/80">
-													<span className="rounded-full bg-white/10 px-2 py-1 ring-1 ring-white/20">{year}</span>
-													<span className="rounded-full bg-white/10 px-2 py-1 ring-1 ring-white/20">
+													<span className="app-category-chip rounded-full bg-white/10 px-2 py-1 ring-1 ring-white/20">{year}</span>
+													<span className="app-category-chip rounded-full bg-white/10 px-2 py-1 ring-1 ring-white/20">
 														{mediaType === "movie" ? "Filme" : "Série"}
 													</span>
-													<span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 ring-1 ring-white/20">
+													<span className="app-category-chip inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 ring-1 ring-white/20">
 														<Star className="h-3 w-3" />
 														{entry.vote_average?.toFixed(1) ?? "-"}
 													</span>
 												</div>
-												<p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-rose-200/90">
+												<p className="app-category-hint text-[11px] font-semibold uppercase tracking-[0.22em] text-rose-200/90">
 													Clique para ver detalhes completos
 												</p>
 											</div>
