@@ -19,7 +19,6 @@ export async function GET(request: Request) {
 			minYear,
 			page,
 		};
-		console.info("[API][discover] start", requestMeta);
 
 		const data = await discoverTitles(mediaType, {
 			genreId: genreParam ? Number(genreParam) : undefined,
@@ -28,22 +27,9 @@ export async function GET(request: Request) {
 			page: Number.isFinite(page) && page > 0 ? page : 1,
 		});
 
-		console.info("[API][discover] success", {
-			...requestMeta,
-			responsePage: data.page,
-			resultsCount: data.results?.length ?? 0,
-			totalPages: data.total_pages,
-			totalResults: data.total_results,
-		});
-
 		return NextResponse.json(data);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : "Unknown error";
-		console.error("[API][discover] error", {
-			url: request.url,
-			message,
-			error,
-		});
 		return NextResponse.json({ message }, { status: 500 });
 	}
 }

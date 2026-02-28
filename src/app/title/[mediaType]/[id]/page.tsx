@@ -124,7 +124,8 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 			<main className="app-title-page min-h-screen bg-[#0b0b0f] text-white">
 				<TitleKeyboardNav previousHref={previousHref} nextHref={nextHref} />
 				<section className="relative overflow-hidden px-6 pb-10 pt-16 sm:px-10 lg:px-16">
-					<div className="app-title-hero-bg absolute inset-0 bg-[radial-gradient(circle_at_top,#2b1a1a,transparent_55%),radial-gradient(circle_at_20%_30%,#2b1f0a,transparent_55%),radial-gradient(circle_at_80%_10%,#11202f,transparent_45%),linear-gradient(180deg,#0b0b0f_0%,#0f111a_40%,#111827_100%)]" />
+					<div className="app-title-hero-bg absolute inset-0" />
+					<div className="app-internal-hero-glow absolute inset-x-0 top-20 h-40 blur-3xl" />
 					{backdrop && (
 						<Image
 							alt={name}
@@ -136,7 +137,7 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 					)}
 					<div className="app-title-hero-overlay absolute inset-0 bg-linear-to-b from-black/65 via-black/55 to-[#0b0b0f]" />
 
-					<div className="relative mx-auto grid max-w-6xl gap-8 lg:grid-cols-[260px_1fr]">
+					<div className="relative mx-auto grid max-w-6xl gap-6 lg:grid-cols-[220px_1fr]">
 						<div>
 							<Link
 								href={`/titles?${listBaseQuery}`}
@@ -145,20 +146,20 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 								<ArrowLeft className="h-4 w-4" />
 								Voltar
 							</Link>
-							<div className="app-title-poster-shell relative h-96 overflow-hidden rounded-2xl border border-white/15 bg-white/5 shadow-2xl shadow-black/50">
+							<div className="app-title-poster-shell relative h-80 overflow-hidden rounded-2xl border border-white/15 bg-white/5 shadow-2xl shadow-black/50 sm:h-90">
 								<Image
 									alt={name}
 									src={poster}
 									fill
-									sizes="260px"
+									sizes="220px"
 									className="app-title-poster-image object-cover"
 								/>
 							</div>
 						</div>
 
-						<div className="space-y-6">
+						<div className="space-y-5">
 							<div>
-								<h1 className="text-3xl font-semibold sm:text-4xl">{name}</h1>
+								<h1 className="text-2xl font-semibold sm:text-3xl">{name}</h1>
 								<p className="mt-2 text-sm text-white/70">{details.tagline ?? ""}</p>
 								<div className="mt-4 flex flex-wrap gap-2">
 									{genres.map((genre) => (
@@ -173,16 +174,16 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 								</div>
 							</div>
 
-							<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+							<div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
 								{infoItems.map((info) => (
 									<div
 										key={info.label}
-										className="app-title-info-card rounded-xl border border-white/10 bg-black/30 px-3 py-3"
+										className="app-title-info-card rounded-xl border border-white/10 bg-black/30 px-3 py-2.5"
 									>
 										<p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/50">
 											{info.label}
 										</p>
-										<p className="mt-1 text-sm text-white">{info.value}</p>
+										<p className="mt-1 text-xs text-white sm:text-sm">{info.value}</p>
 									</div>
 								))}
 							</div>
@@ -233,15 +234,13 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 								)}
 
 								{trailer && (
-									<Link
-										href={`https://www.youtube.com/watch?v=${trailer.key}`}
-										target="_blank"
-										rel="noreferrer"
+									<a
+										href="#trailer-player"
 										className="app-title-pill inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/80 hover:text-white"
 									>
 										<Play className="h-4 w-4 text-rose-300" />
 										Ver trailer
-									</Link>
+									</a>
 								)}
 								{details.homepage && (
 									<Link
@@ -254,6 +253,21 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 									</Link>
 								)}
 							</div>
+
+							{trailer && (
+								<div id="trailer-player" className="app-title-panel overflow-hidden rounded-2xl border border-white/10 bg-black/35">
+									<div className="aspect-video">
+										<iframe
+											src={`https://www.youtube.com/embed/${trailer.key}`}
+											title={`Trailer de ${name}`}
+											allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+											referrerPolicy="strict-origin-when-cross-origin"
+											allowFullScreen
+											className="h-full w-full"
+										/>
+									</div>
+								</div>
+							)}
 						</div>
 					</div>
 				</section>

@@ -8,27 +8,15 @@ export async function GET(request: Request) {
 		const query = searchParams.get("q")?.trim();
 		const pageParam = Number(searchParams.get("page") ?? 1);
 		const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
-		console.info("[API][search] start", { query, page });
 
 		if (!query) {
-			console.warn("[API][search] missing query");
 			return NextResponse.json({ message: "Missing query." }, { status: 400 });
 		}
 
 		const data = await searchMulti(query, "pt-BR", page);
-		console.info("[API][search] raw results", {
-			query,
-			page,
-			total: data.results?.length ?? 0,
-		});
 		const titles = data.results
 			.filter((result) => result.media_type === "movie" || result.media_type === "tv")
 			.slice(0, 12);
-		console.info("[API][search] titles selected", {
-			query,
-			page,
-			total: titles.length,
-		});
 
 		const enriched = await Promise.all(
 			titles.map(async (result) => {
@@ -41,14 +29,6 @@ export async function GET(request: Request) {
 				return { ...details, media_type: mediaType, reviews };
 			})
 		);
-
-		console.info("[API][search] done", {
-			query,
-			page,
-			enriched: enriched.length,
-			total_pages: data.total_pages,
-			total_results: data.total_results,
-		});
 		return NextResponse.json({
 			query,
 			page,
@@ -58,7 +38,6 @@ export async function GET(request: Request) {
 		});
 	} catch (error) {
 		const message = error instanceof Error ? error.message : "Unknown error";
-		console.error("[API][search] error", { message });
 		return NextResponse.json({ message }, { status: 500 });
 	}
 }

@@ -152,13 +152,13 @@ export default function ChatbotWidget() {
 				type="button"
 				onClick={() => setOpen((state) => !state)}
 				aria-label="Abrir Axel"
-				className="app-floating-button fixed bottom-4 right-4 z-80 inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-black/45 text-white/90 shadow-lg shadow-black/40 backdrop-blur-md transition hover:border-rose-300/70 hover:text-rose-200 sm:h-13 sm:w-13"
+				className="app-floating-button fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-80 inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-black/45 text-white/90 shadow-lg shadow-black/40 backdrop-blur-md transition hover:border-rose-300/70 hover:text-rose-200 sm:h-13 sm:w-13"
 			>
 				{open ? <X className="h-5 w-5" /> : <Bot className="h-5 w-5" />}
 			</button>
 
 			{open && (
-				<div className="fixed bottom-20 left-2 right-2 z-90 max-h-[78vh] overflow-hidden rounded-3xl border border-white/10 bg-[#0b0d14] shadow-2xl shadow-black/60 sm:left-auto sm:right-4 sm:w-[min(92vw,380px)] sm:max-h-none">
+				<div className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] left-2 right-2 z-90 max-h-[min(78vh,calc(100dvh-7rem))] overflow-hidden rounded-3xl border border-white/10 bg-[#0b0d14] shadow-2xl shadow-black/60 sm:left-auto sm:right-4 sm:w-[min(92vw,380px)] sm:max-h-none">
 					<div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
 						<div>
 							<p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-rose-200">Axel 🎬</p>
@@ -174,7 +174,7 @@ export default function ChatbotWidget() {
 						</button>
 					</div>
 
-					<div ref={messagesContainerRef} className="app-chat-scrollbar max-h-[52vh] space-y-3 overflow-y-auto px-4 py-3 sm:max-h-80">
+					<div ref={messagesContainerRef} className="app-chat-scrollbar max-h-[min(52vh,calc(100dvh-14rem))] space-y-3 overflow-y-auto px-4 py-3 sm:max-h-80">
 						{messages.map((message) => (
 							<div
 								key={message.id}
@@ -244,7 +244,7 @@ export default function ChatbotWidget() {
 									}
 								}}
 								placeholder="Peça uma indicação..."
-								className="w-full rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/90 placeholder:text-white/40 focus:outline-none"
+								className="w-full rounded-full border border-white/10 bg-white/5 px-3 py-2 text-base text-white/90 placeholder:text-white/40 focus:outline-none sm:text-sm"
 							/>
 							<button
 								type="button"

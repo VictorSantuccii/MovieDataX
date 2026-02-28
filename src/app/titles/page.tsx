@@ -81,19 +81,6 @@ function TitlesPageContent() {
 		return Number.isFinite(parsed) ? parsed : undefined;
 	}, [genreParam]);
 
-	console.info("[UI][titles] render", {
-		mediaType,
-		genreParam,
-		selectedGenreId,
-		page,
-		genresLoading,
-		titlesLoading,
-		genresCount: genres.length,
-		titlesCount: titles.length,
-		totalPages,
-		totalResults,
-	});
-
 	const selectedGenre = useMemo(
 		() => genres.find((genre) => genre.id === selectedGenreId),
 		[genres, selectedGenreId]
@@ -126,22 +113,11 @@ function TitlesPageContent() {
 		}
 		params.set("page", String(nextPage));
 
-		console.info("[UI][titles] updateQuery", {
-			from: searchParamsString,
-			next: {
-				type: nextType,
-				genre: nextGenre,
-				page: nextPage,
-			},
-			result: params.toString(),
-		});
-
 		router.push(`/titles?${params.toString()}`);
 	};
 
 	useEffect(() => {
 		const controller = new AbortController();
-		console.info("[UI][titles] genres.load.start", { mediaType });
 		setGenresLoading(true);
 
 		const loadGenres = async () => {
@@ -149,33 +125,18 @@ function TitlesPageContent() {
 				const response = await fetch(`/api/imdb/genres?type=${mediaType}`, {
 					signal: controller.signal,
 				});
-				console.info("[UI][titles] genres.load.response", {
-					status: response.status,
-					ok: response.ok,
-					mediaType,
-				});
 				if (!response.ok) {
 					throw new Error("Failed to load genres");
 				}
 				const data = (await response.json()) as GenreResponse;
-				console.info("[UI][titles] genres.load.success", {
-					mediaType,
-					count: data.genres?.length ?? 0,
-				});
 				setGenres(data.genres ?? []);
-			} catch (error) {
+			} catch {
 				if (controller.signal.aborted) {
-					console.info("[UI][titles] genres.load.aborted", { mediaType });
 					return;
 				}
-				console.error("[UI][titles] genres.load.error", {
-					mediaType,
-					error,
-				});
 				setGenres([]);
 			} finally {
 				if (!controller.signal.aborted) {
-					console.info("[UI][titles] genres.load.finally", { mediaType });
 					setGenresLoading(false);
 				}
 			}
@@ -183,23 +144,13 @@ function TitlesPageContent() {
 
 		loadGenres();
 		return () => {
-			console.info("[UI][titles] genres.load.cleanup", { mediaType });
 			controller.abort();
 		};
 	}, [mediaType]);
 
 	useEffect(() => {
-		console.info("[UI][titles] selectedGenre.guard.check", {
-			genresLoading,
-			genresCount: genres.length,
-			selectedGenreId,
-			mediaType,
-		});
 
 		if (genresLoading || genres.length === 0) {
-			console.info("[UI][titles] selectedGenre.guard.skip", {
-				reason: genresLoading ? "genresLoading" : "emptyGenres",
-			});
 			return;
 		}
 
@@ -207,9 +158,6 @@ function TitlesPageContent() {
 			selectedGenreId !== undefined && genres.some((genre) => genre.id === selectedGenreId);
 
 		if (hasSelected) {
-			console.info("[UI][titles] selectedGenre.guard.keep-current", {
-				selectedGenreId,
-			});
 			return;
 		}
 
@@ -217,20 +165,11 @@ function TitlesPageContent() {
 		params.set("type", mediaType);
 		params.set("genre", String(genres[0].id));
 		params.set("page", "1");
-		console.info("[UI][titles] selectedGenre.guard.replace", {
-			from: searchParamsString,
-			to: params.toString(),
-		});
 		router.replace(`/titles?${params.toString()}`);
 	}, [genres, genresLoading, mediaType, router, searchParamsString, selectedGenreId]);
 
 	useEffect(() => {
 		if (!selectedGenreId) {
-			console.info("[UI][titles] titles.load.skip", {
-				reason: "noSelectedGenre",
-				mediaType,
-				page,
-			});
 			setTitles([]);
 			setTotalPages(1);
 			setTotalResults(0);
@@ -240,11 +179,6 @@ function TitlesPageContent() {
 			}
 
 		const controller = new AbortController();
-		console.info("[UI][titles] titles.load.start", {
-			mediaType,
-			selectedGenreId,
-			page,
-		});
 		setTitlesLoading(true);
 
 		const loadTitles = async () => {
@@ -253,39 +187,13 @@ function TitlesPageContent() {
 					`/api/imdb/discover?type=${mediaType}&genre=${selectedGenreId}&page=${page}`,
 					{ signal: controller.signal }
 				);
-				console.info("[UI][titles] titles.load.response", {
-					status: response.status,
-					ok: response.ok,
-					mediaType,
-					selectedGenreId,
-					page,
-				});
 				if (!response.ok) {
 					throw new Error("Failed to load titles");
 				}
 				const data = (await response.json()) as DiscoverResponse;
 				if (controller.signal.aborted) {
-					console.info("[UI][titles] titles.load.aborted", {
-						mediaType,
-						selectedGenreId,
-						page,
-					});
 					return;
 				}
-
-				console.info("[UI][titles] titles.load.success", {
-					mediaType,
-					selectedGenreId,
-					page: data.page,
-					results: data.results?.length ?? 0,
-					totalPages: data.total_pages,
-					totalResults: data.total_results,
-					sample: (data.results ?? []).slice(0, 3).map((entry) => ({
-						id: entry.id,
-						title: entry.title ?? entry.name ?? "-",
-						hasPoster: Boolean(entry.poster_path),
-					})),
-				});
 
 				const resolvedTotalPages = Math.max(1, data.total_pages ?? 1);
 				if (page > resolvedTotalPages) {
@@ -293,11 +201,6 @@ function TitlesPageContent() {
 					params.set("type", mediaType);
 					params.set("genre", String(selectedGenreId));
 					params.set("page", String(resolvedTotalPages));
-					console.warn("[UI][titles] titles.load.page-out-of-range", {
-						requestedPage: page,
-						resolvedTotalPages,
-						to: params.toString(),
-					});
 					router.replace(`/titles?${params.toString()}`);
 					return;
 				}
@@ -310,31 +213,15 @@ function TitlesPageContent() {
 				);
 				setTotalPages(resolvedTotalPages);
 				setTotalResults(data.total_results ?? 0);
-			} catch (error) {
+			} catch {
 				if (controller.signal.aborted) {
-					console.info("[UI][titles] titles.load.aborted-catch", {
-						mediaType,
-						selectedGenreId,
-						page,
-					});
 					return;
 				}
-				console.error("[UI][titles] titles.load.error", {
-					mediaType,
-					selectedGenreId,
-					page,
-					error,
-				});
 				setTitles([]);
 				setTotalPages(1);
 				setTotalResults(0);
 			} finally {
 				if (!controller.signal.aborted) {
-					console.info("[UI][titles] titles.load.finally", {
-						mediaType,
-						selectedGenreId,
-						page,
-					});
 					setTitlesLoading(false);
 				}
 			}
@@ -342,11 +229,6 @@ function TitlesPageContent() {
 
 		loadTitles();
 		return () => {
-			console.info("[UI][titles] titles.load.cleanup", {
-				mediaType,
-				selectedGenreId,
-				page,
-			});
 			controller.abort();
 		};
 	}, [mediaType, page, router, searchParamsString, selectedGenreId]);
@@ -356,10 +238,10 @@ function TitlesPageContent() {
 		entry.release_date?.slice(0, 4) ?? entry.first_air_date?.slice(0, 4) ?? "-";
 
 	return (
-		<main className="min-h-screen bg-[#0b0b0f] text-white">
+		<main className="app-internal-page min-h-screen text-white">
 			<section className="relative overflow-hidden px-6 pb-10 pt-16 sm:px-10 lg:px-16">
-				<div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#2b1a1a,transparent_55%),radial-gradient(circle_at_20%_30%,#2b1f0a,transparent_55%),radial-gradient(circle_at_80%_10%,#11202f,transparent_45%),linear-gradient(180deg,#0b0b0f_0%,#0f111a_40%,#111827_100%)]" />
-				<div className="absolute inset-x-0 top-20 h-40 bg-linear-to-r from-rose-600/25 via-red-500/15 to-amber-400/10 blur-3xl" />
+				<div className="app-internal-hero-bg absolute inset-0" />
+				<div className="app-internal-hero-glow absolute inset-x-0 top-20 h-40 blur-3xl" />
 
 				<motion.div
 					className="relative mx-auto grid max-w-6xl gap-6"
@@ -377,7 +259,7 @@ function TitlesPageContent() {
 							Voltar
 						</button>
 						<span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase text-rose-200">
-							MovieDataX
+							Catálogo
 						</span>
 					</motion.div>
 
@@ -399,11 +281,11 @@ function TitlesPageContent() {
 								value={searchTitle}
 								onChange={(event) => setSearchTitle(event.target.value)}
 								placeholder="Pesquisar título (filme ou série)"
-								className="w-full bg-transparent text-sm text-white/85 placeholder:text-white/40 focus:outline-none"
+								className="w-full bg-transparent text-base text-white/85 placeholder:text-white/40 focus:outline-none sm:text-sm"
 							/>
 							<button
 								type="submit"
-								className="rounded-full bg-rose-600 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-rose-500"
+								className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-rose-600 px-4 text-[11px] font-semibold uppercase tracking-[0.14em] leading-none text-white transition hover:bg-rose-500 sm:text-xs sm:tracking-[0.18em]"
 							>
 								Buscar
 							</button>
@@ -505,7 +387,7 @@ function TitlesPageContent() {
 							Carregando títulos da categoria...
 						</div>
 					) : (
-						<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+						<div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:grid sm:snap-none sm:overflow-visible sm:pb-0 sm:gap-3 sm:grid-cols-2 lg:grid-cols-4">
 							{titles.map((entry, index) => {
 								const name = getTitleName(entry);
 								const year = getTitleYear(entry);
@@ -514,60 +396,45 @@ function TitlesPageContent() {
 									: "/placeholders/title-fallback.svg";
 
 								if (index < 3) {
-									console.info("[UI][titles] card.render", {
-										id: entry.id,
-										name,
-										year,
-										hasPoster: Boolean(entry.poster_path),
-										poster,
-									});
 								}
 
 								return (
 									<div
 										key={entry.id}
-										className="app-category-card group overflow-hidden rounded-2xl border border-white/15 bg-slate-900/90 shadow-lg shadow-black/30 ring-1 ring-white/10 transition duration-300 hover:-translate-y-1 hover:border-rose-300/60 hover:shadow-2xl hover:shadow-rose-900/20"
+										className="app-category-card group w-30 shrink-0 snap-start overflow-hidden rounded-2xl border transition duration-300 hover:-translate-y-1 sm:w-auto"
 									>
 										<Link
 											href={`/title/${mediaType}/${entry.id}?type=${mediaType}&genre=${selectedGenreId ?? ""}&page=${page}`}
 											className="block"
 										>
-											<div className="app-category-poster relative h-72 bg-slate-800 sm:h-80 lg:h-72">
+											<div className="app-category-poster relative aspect-2/3">
 												<Image
 													alt={name}
 													src={poster}
 													fill
-													sizes="(min-width: 1024px) 16rem, (min-width: 640px) 40vw, 70vw"
+													sizes="(min-width: 1024px) 11rem, (min-width: 640px) 40vw, 70vw"
 													className="app-category-poster-image object-cover"
 													onLoad={() => {
 														if (index < 3) {
-															console.info("[UI][titles] image.load", {
-																id: entry.id,
-																src: poster,
-															});
 														}
 													}}
 													onError={() => {
-														console.error("[UI][titles] image.error", {
-															id: entry.id,
-															src: poster,
-														});
 													}}
 												/>
 											</div>
-											<div className="space-y-3 p-4">
-												<p className="line-clamp-2 min-h-10 text-base font-semibold text-white">{name}</p>
-												<div className="flex flex-wrap items-center gap-2 text-xs text-white/80">
-													<span className="app-category-chip rounded-full bg-white/10 px-2 py-1 ring-1 ring-white/20">{year}</span>
-													<span className="app-category-chip rounded-full bg-white/10 px-2 py-1 ring-1 ring-white/20">
+											<div className="space-y-2 p-2.5 sm:p-3">
+												<p className="app-category-title line-clamp-2 min-h-9 text-[11px] font-semibold sm:text-sm">{name}</p>
+												<div className="flex flex-wrap items-center gap-1 text-[10px] sm:gap-1.5 sm:text-xs">
+													<span className="app-main-poster-chip rounded-full px-2 py-0.5 font-semibold">{year}</span>
+													<span className="app-main-poster-chip rounded-full px-2 py-0.5 font-semibold">
 														{mediaType === "movie" ? "Filme" : "Série"}
 													</span>
-													<span className="app-category-chip inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 ring-1 ring-white/20">
+													<span className="app-main-poster-chip app-rating-chip inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold">
 														<Star className="h-3 w-3" />
 														{entry.vote_average?.toFixed(1) ?? "-"}
 													</span>
 												</div>
-												<p className="app-category-hint text-[11px] font-semibold uppercase tracking-[0.22em] text-rose-200/90">
+												<p className="app-category-hint text-[10px] font-semibold uppercase tracking-[0.2em] sm:text-[11px]">
 													Clique para ver detalhes completos
 												</p>
 											</div>
@@ -578,7 +445,7 @@ function TitlesPageContent() {
 							})}
 
 							{titles.length === 0 && (
-								<div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/70 sm:col-span-2 lg:col-span-4">
+								<div className="w-full rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/70 sm:col-span-2 lg:col-span-4">
 									Nenhum título encontrado nessa categoria.
 								</div>
 							)}

@@ -29,35 +29,14 @@ const getAuthHeaders = () => {
 const fetchTmdb = async <T>(path: string, options: FetchOptions = {}) => {
 	const query = buildQuery(options.params);
 	const url = query ? `${API_BASE_URL}${path}?${query}` : `${API_BASE_URL}${path}`;
-	const startedAt = Date.now();
-	console.info("[TMDB] Request", {
-		path,
-		url,
-		query: options.params ?? {},
-		revalidateSeconds: options.cacheSeconds ?? 3600,
-	});
 
 	const response = await fetch(url, {
 		headers: getAuthHeaders(),
 		next: { revalidate: options.cacheSeconds ?? 3600 },
 	});
-	console.info("[TMDB] Response", {
-		path,
-		url,
-		status: response.status,
-		ok: response.ok,
-		durationMs: Date.now() - startedAt,
-	});
 
 	if (!response.ok) {
 		const errorText = await response.text();
-		console.error("[TMDB] Error", {
-			path,
-			url,
-			status: response.status,
-			durationMs: Date.now() - startedAt,
-			errorText,
-		});
 		throw new Error(`TMDB request failed (${response.status}): ${errorText}`);
 	}
 
@@ -290,16 +269,17 @@ export const searchMovies = (query: string, language = "pt-BR") =>
 
 export const getTrendingAll = (
 	timeWindow: "day" | "week" = "week",
-	language = "pt-BR"
+	language = "pt-BR",
+	page = 1
 ) =>
 	fetchTmdb<TmdbListResponse>(`/trending/all/${timeWindow}`, {
-		params: { language },
+		params: { language, page },
 		cacheSeconds: 900,
 	});
 
-export const getPopularMovies = (language = "pt-BR") =>
+export const getPopularMovies = (language = "pt-BR", page = 1) =>
 	fetchTmdb<TmdbListResponse>("/movie/popular", {
-		params: { language },
+		params: { language, page },
 		cacheSeconds: 1800,
 	});
 

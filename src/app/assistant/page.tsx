@@ -148,10 +148,10 @@ export default function AssistantPage() {
 	};
 
 	return (
-		<main className="min-h-screen bg-[#0b0b0f] text-white">
+		<main className="app-internal-page min-h-screen text-white">
 			<section className="relative overflow-hidden px-6 pb-10 pt-16 sm:px-10 lg:px-16">
-				<div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#2b1a1a,transparent_55%),radial-gradient(circle_at_20%_30%,#2b1f0a,transparent_55%),radial-gradient(circle_at_80%_10%,#11202f,transparent_45%),linear-gradient(180deg,#0b0b0f_0%,#0f111a_40%,#111827_100%)]" />
-				<div className="absolute inset-x-0 top-20 h-40 bg-linear-to-r from-rose-600/25 via-red-500/15 to-amber-400/10 blur-3xl" />
+				<div className="app-internal-hero-bg absolute inset-0" />
+				<div className="app-internal-hero-glow absolute inset-x-0 top-20 h-40 blur-3xl" />
 
 				<div className="relative mx-auto max-w-6xl">
 					<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-rose-200">
@@ -228,7 +228,7 @@ export default function AssistantPage() {
 								value={input}
 								onChange={(event) => setInput(event.target.value)}
 								placeholder="Ex: Quero uma série de suspense com alta nota e poucos episódios"
-								className="w-full rounded-full border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/90 placeholder:text-white/40 focus:outline-none"
+								className="w-full rounded-full border border-white/10 bg-white/5 px-4 py-3 text-base text-white/90 placeholder:text-white/40 focus:outline-none sm:text-sm"
 							/>
 							<button
 								type="submit"

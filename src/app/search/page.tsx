@@ -239,7 +239,6 @@ export default function SearchPage() {
 
 	useEffect(() => {
 		if (!query) {
-			console.info("[UI][search] empty query");
 			setResults([]);
 			setTotalPages(1);
 			setTotalResults(0);
@@ -250,27 +249,14 @@ export default function SearchPage() {
 		let isActive = true;
 		const loadResults = async (targetPage: number) => {
 			setStatus("loading");
-			console.info("[UI][search] loading", { query, page: targetPage });
 			try {
 				const response = await fetch(
 					`/api/imdb/search?q=${encodeURIComponent(query)}&page=${targetPage}`
 				);
-				console.info("[UI][search] response", {
-					status: response.status,
-					query,
-					page: targetPage,
-				});
 				if (!response.ok) {
 					throw new Error("Search failed");
 				}
 				const data = (await response.json()) as SearchResponse;
-				console.info("[UI][search] results", {
-					query,
-					page: data.page,
-					totalPages: data.total_pages,
-					totalResults: data.total_results,
-					total: data.results?.length ?? 0,
-				});
 				if (isActive) {
 					setResults(data.results ?? []);
 					setPage(data.page ?? targetPage);
@@ -279,17 +265,9 @@ export default function SearchPage() {
 					setOpenId(null);
 					setStatus("done");
 				}
-			} catch (error) {
-				console.error("[UI][search] load error", {
-					query,
-					error: error instanceof Error ? error.message : "Unknown error",
-				});
+			} catch {
 				if (isActive) {
 					setStatus("error");
-				}
-			} finally {
-				if (isActive) {
-					// no-op
 				}
 			}
 		};
@@ -371,10 +349,10 @@ export default function SearchPage() {
 	}, [hasActiveFilters, query, status, total, visibleCount]);
 
 	return (
-		<main className="min-h-screen bg-[#0b0b0f] text-white">
+		<main className="app-search-page min-h-screen text-white">
 			<section className="relative overflow-hidden px-6 pb-12 pt-16 sm:px-10 lg:px-16">
-				<div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#2b1a1a,transparent_55%),radial-gradient(circle_at_20%_30%,#2b1f0a,transparent_55%),radial-gradient(circle_at_80%_10%,#11202f,transparent_45%),linear-gradient(180deg,#0b0b0f_0%,#0f111a_40%,#111827_100%)]" />
-				<div className="absolute inset-x-0 top-20 h-40 bg-linear-to-r from-rose-600/25 via-red-500/15 to-amber-400/10 blur-3xl" />
+				<div className="app-search-hero-bg absolute inset-0" />
+				<div className="app-search-hero-glow absolute inset-x-0 top-20 h-40 blur-3xl" />
 				<motion.div
 					className="relative mx-auto grid max-w-6xl gap-6"
 					variants={container}
@@ -392,16 +370,14 @@ export default function SearchPage() {
 						</button>
 						<span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase text-rose-200">
 							<Ticket className="h-4 w-4" />
-							MovieDataX
+							Busca
 						</span>
-						<span className="text-2xl font-semibold tracking-[0.2em] text-white sm:text-3xl lg:text-4xl">
-							Resultados
-						</span>
+
 					</motion.div>
 					<motion.div variants={item}>
 						<form
 							onSubmit={handleSearchSubmit}
-							className="mb-4 flex w-full max-w-2xl items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 sm:rounded-full"
+							className="app-search-form mb-4 flex w-full max-w-2xl items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 sm:rounded-full"
 						>
 							<Search className="h-5 w-5 text-rose-200" />
 							<input
@@ -409,11 +385,11 @@ export default function SearchPage() {
 								value={searchInput}
 								onChange={(event) => setSearchInput(event.target.value)}
 								placeholder="Pesquisar filmes e séries"
-								className="w-full bg-transparent text-sm text-white/85 placeholder:text-white/45 focus:outline-none"
+								className="app-search-input w-full bg-transparent text-base text-white/85 placeholder:text-white/45 focus:outline-none sm:text-sm"
 							/>
 							<button
 								type="submit"
-								className="rounded-full bg-rose-600 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-rose-500"
+								className="app-search-submit inline-flex h-10 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-rose-600 px-4 text-[11px] font-semibold uppercase tracking-[0.14em] leading-none text-white transition hover:bg-rose-500 sm:h-10 sm:text-xs sm:tracking-[0.18em]"
 							>
 								Buscar
 							</button>
@@ -427,7 +403,7 @@ export default function SearchPage() {
 								: `${total} títulos encontrados.`}
 						</p>
 						<div className="mt-4 grid max-w-3xl gap-3 sm:grid-cols-3">
-							<label className="grid gap-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
+							<label className="app-search-filter-label grid gap-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
 								Tipo
 								<select
 									value={mediaFilter}
@@ -437,14 +413,14 @@ export default function SearchPage() {
 										setPage(1);
 										router.push(buildSearchUrl({ mediaFilter: nextMediaFilter, page: 1 }));
 									}}
-									className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/85 outline-none transition focus:border-rose-400/60"
+									className="app-search-filter app-search-filter-control app-search-select rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-white/85 outline-none transition focus:border-rose-400/60"
 								>
 									<option value="all" className="bg-[#0b0b0f] text-white">Todos</option>
 									<option value="movie" className="bg-[#0b0b0f] text-white">Filmes</option>
 									<option value="tv" className="bg-[#0b0b0f] text-white">Séries</option>
 								</select>
 							</label>
-							<label className="grid gap-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
+							<label className="app-search-filter-label grid gap-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
 								Nota mínima
 								<select
 									value={String(minRating)}
@@ -454,7 +430,7 @@ export default function SearchPage() {
 										setPage(1);
 										router.push(buildSearchUrl({ minRating: nextMinRating, page: 1 }));
 									}}
-									className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/85 outline-none transition focus:border-rose-400/60"
+									className="app-search-filter app-search-filter-control app-search-select rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-white/85 outline-none transition focus:border-rose-400/60"
 								>
 									<option value="0" className="bg-[#0b0b0f] text-white">Sem mínimo</option>
 									<option value="5" className="bg-[#0b0b0f] text-white">5.0+</option>
@@ -463,7 +439,7 @@ export default function SearchPage() {
 									<option value="8" className="bg-[#0b0b0f] text-white">8.0+</option>
 								</select>
 							</label>
-							<label className="grid gap-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
+							<label className="app-search-filter-label grid gap-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
 								Ano mínimo
 								<input
 									type="number"
@@ -478,7 +454,7 @@ export default function SearchPage() {
 										router.push(buildSearchUrl({ minYear: nextMinYear, page: 1 }));
 									}}
 									placeholder="Ex: 2018"
-									className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/85 placeholder:text-white/40 outline-none transition focus:border-rose-400/60"
+									className="app-search-filter app-search-filter-control rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-white/85 placeholder:text-white/40 outline-none transition focus:border-rose-400/60"
 								/>
 							</label>
 						</div>
@@ -514,7 +490,7 @@ export default function SearchPage() {
 			<section className="px-6 pb-20 sm:px-10 lg:px-16">
 				<div className="mx-auto max-w-6xl">
 					{emptyState ? (
-						<div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-sm text-white/70">
+						<div className="app-search-empty rounded-3xl border border-white/10 bg-white/5 p-8 text-sm text-white/70">
 							{status === "loading" && (
 								<span className="mb-3 inline-flex items-center gap-2 text-white">
 									<Loader2 className="h-4 w-4 animate-spin" />
@@ -569,53 +545,53 @@ export default function SearchPage() {
 								return (
 									<motion.article
 										key={rowId}
-										className="overflow-hidden rounded-3xl border border-white/10 bg-white/5"
+										className="app-search-card overflow-hidden rounded-3xl border border-white/10 bg-white/5"
 										variants={item}
 									>
-										<div className="grid gap-6 p-6 lg:grid-cols-[200px_1fr]">
+										<div className="grid gap-5 p-5 lg:grid-cols-[180px_1fr]">
 											<div className="flex flex-col gap-4">
-												<div className="relative h-75 overflow-hidden rounded-2xl bg-white/10">
+												<div className="app-search-poster relative h-62 overflow-hidden rounded-2xl bg-white/10 sm:h-68">
 													<Image
 														alt={name}
 														src={poster}
 														fill
-														sizes="(min-width: 1024px) 200px, 60vw"
+														sizes="(min-width: 1024px) 180px, 60vw"
 														className="object-cover"
 													/>
 												</div>
 												<div className="flex flex-wrap gap-2">
-													<span className="rounded-full bg-rose-500/20 px-2 py-1 text-xs font-semibold text-rose-200">
+													<span className="app-search-chip rounded-full bg-rose-500/20 px-2 py-1 text-xs font-semibold text-rose-200">
 														{resolvedMediaType === "movie" ? "Filme" : "Série"}
 													</span>
-													<span className="rounded-full bg-white/10 px-2 py-1 text-xs font-semibold text-white/70">
+													<span className="app-search-chip rounded-full bg-white/10 px-2 py-1 text-xs font-semibold text-white/70">
 														{year}
 													</span>
 												</div>
 											</div>
 
-											<div className="space-y-4">
+											<div className="space-y-3">
 												<div className="flex flex-wrap items-center justify-between gap-3">
 													<div>
-														<h2 className="text-2xl font-semibold text-white">{name}</h2>
+														<h2 className="text-xl font-semibold text-white">{name}</h2>
 														<p className="text-sm uppercase tracking-[0.3em] text-white/40">
 															{formatDate(title.release_date ?? title.first_air_date)}
 														</p>
 													</div>
 													<div className="flex flex-wrap items-center gap-2">
-														<span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white">
+														<span className="app-search-chip app-search-rating inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white">
 															<Star className="h-3 w-3" />
 															{title.vote_average?.toFixed(1) ?? "-"}
 														</span>
-														<span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/70">
+														<span className="app-search-chip rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/70">
 															{title.vote_count ?? 0} votos
 														</span>
-														<span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/70">
+														<span className="app-search-chip rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/70">
 															{runtime}
 														</span>
 													</div>
 												</div>
 
-												<p className="text-sm text-white/70">
+												<p className="app-search-overview text-xs text-white/70 sm:text-sm">
 													{title.overview || "Sem descrição cadastrada."}
 												</p>
 
@@ -624,7 +600,7 @@ export default function SearchPage() {
 														<Link
 															key={genre.id}
 															href={`/titles?type=${resolvedMediaType}&genre=${genre.id}&page=1`}
-															className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs font-semibold text-white/70"
+															className="app-search-genre rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs font-semibold text-white/70"
 														>
 															{genre.name}
 														</Link>
@@ -634,10 +610,8 @@ export default function SearchPage() {
 												<div className="flex flex-wrap items-center gap-3">
 													{trailer ? (
 														<a
-															className="inline-flex items-center gap-2 rounded-full bg-rose-600 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-rose-500"
-															href={`https://www.youtube.com/watch?v=${trailer.key}`}
-															target="_blank"
-															rel="noreferrer"
+															className="app-search-action-primary inline-flex items-center gap-2 rounded-full bg-rose-600 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-rose-500"
+															href={`#trailer-${title.id}`}
 														>
 															<Play className="h-4 w-4" />
 															Ver trailer
@@ -649,7 +623,7 @@ export default function SearchPage() {
 													)}
 													{backdrop && (
 														<a
-															className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/70"
+															className="app-search-action-secondary rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/70"
 															href={backdrop}
 															target="_blank"
 															rel="noreferrer"
@@ -660,18 +634,33 @@ export default function SearchPage() {
 													<button
 														type="button"
 														onClick={() => setOpenId(isOpen ? null : rowId)}
-														className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/70 transition hover:border-rose-400/60 hover:text-white"
+														className="app-search-action-secondary rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/70 transition hover:border-rose-400/60 hover:text-white"
 														aria-expanded={isOpen}
 													>
 														{isOpen ? "Ocultar dados" : "Ver dados completos"}
 													</button>
 												</div>
 
-												<div className="grid gap-3 sm:grid-cols-3">
+												{trailer && (
+													<div id={`trailer-${title.id}`} className="app-search-trailer overflow-hidden rounded-2xl border border-white/10 bg-black/60">
+														<div className="aspect-video">
+															<iframe
+																src={`https://www.youtube.com/embed/${trailer.key}`}
+																title={`Trailer de ${name}`}
+																allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+																referrerPolicy="strict-origin-when-cross-origin"
+																allowFullScreen
+																className="h-full w-full"
+															/>
+														</div>
+													</div>
+												)}
+
+												<div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:grid sm:snap-none sm:overflow-visible sm:pb-0 sm:gap-3 sm:grid-cols-3">
 													{backdrops.map((image) => (
 														<div
 															key={image.file_path}
-															className="relative h-24 overflow-hidden rounded-2xl border border-white/10"
+															className="relative h-24 w-48 shrink-0 snap-start overflow-hidden rounded-2xl border border-white/10 sm:w-auto"
 														>
 															<Image
 																alt={name}
@@ -685,79 +674,79 @@ export default function SearchPage() {
 												</div>
 
 												{isOpen && (
-													<div className="grid gap-4 rounded-2xl border border-white/10 bg-black/40 p-4 text-xs text-white/70">
+													<div className="app-search-expanded grid gap-4 rounded-2xl border border-white/10 bg-black/40 p-4 text-xs text-white/70">
 														<div>
 															<p className="mb-2 text-xs font-semibold uppercase tracking-[0.3em] text-rose-200">
 																Detalhes do título
 															</p>
-															<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-																<div className="rounded-xl border border-white/10 bg-white/5 p-3">
+															<div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+																<div className="rounded-xl border border-white/10 bg-white/5 p-2.5">
 																	<p className="text-[10px] uppercase tracking-[0.3em] text-white/40">
 																		Tipo
 																	</p>
-																	<p className="mt-2 text-sm font-semibold text-white">
+																	<p className="mt-1.5 text-xs font-semibold text-white sm:text-sm">
 																		{resolvedMediaType === "movie" ? "Filme" : "Série"}
 																	</p>
 																</div>
-																<div className="rounded-xl border border-white/10 bg-white/5 p-3">
+																<div className="rounded-xl border border-white/10 bg-white/5 p-2.5">
 																	<p className="text-[10px] uppercase tracking-[0.3em] text-white/40">
 																		Direção
 																	</p>
-																	<p className="mt-2 text-sm font-semibold text-white">{leadName}</p>
+																	<p className="mt-1.5 text-xs font-semibold text-white sm:text-sm">{leadName}</p>
 																</div>
-																<div className="rounded-xl border border-white/10 bg-white/5 p-3">
+																<div className="rounded-xl border border-white/10 bg-white/5 p-2.5">
 																	<p className="text-[10px] uppercase tracking-[0.3em] text-white/40">
 																		Duração
 																	</p>
-																	<p className="mt-2 text-sm font-semibold text-white">{runtime}</p>
+																	<p className="mt-1.5 text-xs font-semibold text-white sm:text-sm">{runtime}</p>
 																</div>
-																<div className="rounded-xl border border-white/10 bg-white/5 p-3">
+																<div className="rounded-xl border border-white/10 bg-white/5 p-2.5">
 																	<p className="text-[10px] uppercase tracking-[0.3em] text-white/40">
 																		Avaliações
 																	</p>
-																	<p className="mt-2 text-sm font-semibold text-white">
+																	<p className="mt-1.5 text-xs font-semibold text-white sm:text-sm">
 																		{title.vote_average?.toFixed(1) ?? "-"} ({title.vote_count ?? 0})
 																	</p>
 																</div>
-																<div className="rounded-xl border border-white/10 bg-white/5 p-3">
+																<div className="rounded-xl border border-white/10 bg-white/5 p-2.5">
 																	<p className="text-[10px] uppercase tracking-[0.3em] text-white/40">
 																		Status
 																	</p>
-																	<p className="mt-2 text-sm font-semibold text-white">{status}</p>
+																	<p className="mt-1.5 text-xs font-semibold text-white sm:text-sm">{status}</p>
 																</div>
-																<div className="rounded-xl border border-white/10 bg-white/5 p-3">
+																<div className="rounded-xl border border-white/10 bg-white/5 p-2.5">
 																	<p className="text-[10px] uppercase tracking-[0.3em] text-white/40">
 																		Gêneros
 																	</p>
-																	<p className="mt-2 text-sm font-semibold text-white">
+																	<p className="mt-1.5 text-xs font-semibold text-white sm:text-sm">
 																		{title.genres?.map((genre) => genre.name).join(", ") || "-"}
 																	</p>
 																</div>
-																<div className="rounded-xl border border-white/10 bg-white/5 p-3">
+																<div className="rounded-xl border border-white/10 bg-white/5 p-2.5">
 																	<p className="text-[10px] uppercase tracking-[0.3em] text-white/40">
 																		Orçamento
 																	</p>
-																	<p className="mt-2 text-sm font-semibold text-white">{budget}</p>
+																	<p className="mt-1.5 text-xs font-semibold text-white sm:text-sm">{budget}</p>
 																</div>
-																<div className="rounded-xl border border-white/10 bg-white/5 p-3">
+																<div className="rounded-xl border border-white/10 bg-white/5 p-2.5">
 																	<p className="text-[10px] uppercase tracking-[0.3em] text-white/40">
 																		Imagens
 																	</p>
-																	<p className="mt-2 text-sm font-semibold text-white">
+																	<p className="mt-1.5 text-xs font-semibold text-white sm:text-sm">
 																		{postersCount} posters, {backdropsCount} backdrops
 																	</p>
 																</div>
-																<div className="rounded-xl border border-white/10 bg-white/5 p-3">
+																<div className="rounded-xl border border-white/10 bg-white/5 p-2.5">
 																	<p className="text-[10px] uppercase tracking-[0.3em] text-white/40">
 																		Receita
 																	</p>
-																	<p className="mt-2 text-sm font-semibold text-white">{revenue}</p>
+																	<p className="mt-1.5 text-xs font-semibold text-white sm:text-sm">{revenue}</p>
 																</div>
-																<div className="rounded-xl border border-white/10 bg-white/5 p-3">
+																<div className="rounded-xl border border-white/10 bg-white/5 p-2.5">
 																	<p className="text-[10px] uppercase tracking-[0.3em] text-white/40">
 																		Videos
 																	</p>
-																	<p className="mt-2 text-sm font-semibold text-white">
+																	<p className="mt-1.5 text-xs font-semibold text-white sm:text-sm">
 																		{videosCount} disponiveis
 																	</p>
 																</div>
@@ -773,7 +762,7 @@ export default function SearchPage() {
 																	Elenco não informado.
 																</p>
 															) : (
-																<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+																<div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:grid sm:snap-none sm:overflow-visible sm:pb-0 sm:gap-3 sm:grid-cols-2 lg:grid-cols-3">
 																	{cast.map((person) => {
 																		const profile = person.profile_path
 																			? `${imageBase}/w185${person.profile_path}`
@@ -783,7 +772,7 @@ export default function SearchPage() {
 																			<Link
 																				key={person.id}
 																				href={`/person/${person.id}`}
-																				className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 transition duration-300 hover:-translate-y-0.5 hover:border-rose-300/60 hover:bg-white/10"
+																				className="app-search-cast-card group flex w-58 shrink-0 snap-start items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 transition duration-300 hover:-translate-y-0.5 hover:border-rose-300/60 hover:bg-white/10 sm:w-auto"
 																			>
 																				<div className="relative h-10 w-10 overflow-hidden rounded-full bg-white/10">
 																					<Image
@@ -820,7 +809,7 @@ export default function SearchPage() {
 																	{reviews.slice(0, 3).map((review) => (
 																		<div
 																			key={review.id}
-																			className="rounded-2xl border border-white/10 bg-white/5 p-3"
+																			className="app-search-review-card rounded-2xl border border-white/10 bg-white/5 p-3"
 																		>
 																			<p className="text-xs font-semibold text-white">
 																				{review.author}

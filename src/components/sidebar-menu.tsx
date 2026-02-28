@@ -46,7 +46,7 @@ export default function SidebarMenu() {
 				type="button"
 				onClick={() => setOpen(true)}
 				aria-label="Abrir menu"
-				className="app-floating-button fixed left-3 top-3 z-70 inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/45 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/90 shadow-lg shadow-black/40 backdrop-blur-md transition hover:border-rose-300/70 hover:text-rose-200 sm:left-4 sm:top-4 sm:px-4 sm:text-xs"
+				className="app-floating-button fixed left-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-70 inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/45 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/90 shadow-lg shadow-black/40 backdrop-blur-md transition hover:border-rose-300/70 hover:text-rose-200 sm:left-4 sm:top-[calc(1rem+env(safe-area-inset-top))] sm:px-4 sm:text-xs"
 			>
 				<Menu className="h-4 w-4" />
 				Menu

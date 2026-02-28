@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ChevronLeft, ChevronRight, Users } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Clapperboard, TrendingUp, Users } from "lucide-react";
 
 type PopularPersonSpot = {
 	id: number;
@@ -92,10 +92,10 @@ export default function PeoplePage() {
 	};
 
 	return (
-		<main className="min-h-screen bg-[#0b0b0f] text-white">
+		<main className="app-people-page min-h-screen text-white">
 			<section className="relative overflow-hidden px-6 pb-10 pt-16 sm:px-10 lg:px-16">
-				<div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#2b1a1a,transparent_55%),radial-gradient(circle_at_20%_30%,#2b1f0a,transparent_55%),radial-gradient(circle_at_80%_10%,#11202f,transparent_45%),linear-gradient(180deg,#0b0b0f_0%,#0f111a_40%,#111827_100%)]" />
-				<div className="absolute inset-x-0 top-20 h-40 bg-linear-to-r from-rose-600/25 via-red-500/15 to-amber-400/10 blur-3xl" />
+				<div className="app-people-hero-bg absolute inset-0" />
+				<div className="app-people-hero-glow absolute inset-x-0 top-20 h-40 blur-3xl" />
 
 				<div className="relative mx-auto max-w-6xl">
 					<div className="flex flex-wrap items-center justify-between gap-3">
@@ -148,11 +148,11 @@ export default function PeoplePage() {
 					</div>
 
 					{loading ? (
-						<div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/70">
+						<div className="app-people-panel rounded-2xl border p-6 text-sm">
 							Carregando atores...
 						</div>
 					) : (
-						<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+						<div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:grid sm:snap-none sm:overflow-visible sm:pb-0 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
 							{people.map((person) => {
 								const profile = person.profile_path
 									? `${imageBase}/w500${person.profile_path}`
@@ -162,34 +162,41 @@ export default function PeoplePage() {
 									<Link
 										key={`person-${person.id}`}
 										href={`/person/${person.id}`}
-										className="group block rounded-3xl border border-white/10 bg-white/5 p-5 transition duration-300 hover:-translate-y-1 hover:border-rose-300/60 hover:bg-white/10 hover:shadow-lg hover:shadow-rose-900/20"
+										className="app-people-card group block w-64 shrink-0 snap-start rounded-3xl border p-4 transition duration-300 hover:-translate-y-1 sm:w-auto"
 									>
-										<div className="flex gap-4">
-											<div className="relative h-32 w-24 overflow-hidden rounded-2xl bg-white/10">
+										<div className="flex gap-3">
+											<div className="app-people-poster relative h-28 w-20 overflow-hidden rounded-2xl">
 												<Image
 													alt={person.name}
 													src={profile}
 													fill
-													sizes="96px"
+													sizes="80px"
 													className="object-cover transition duration-300 group-hover:scale-105"
 												/>
 											</div>
 											<div className="flex-1">
-												<p className="text-base font-semibold text-white transition group-hover:text-rose-100">{person.name}</p>
+												<p className="app-people-name text-sm font-semibold transition sm:text-base">{person.name}</p>
 												<p className="mt-1 text-xs uppercase tracking-[0.2em] text-white/60">
 													{person.known_for_department ?? "Atuação"}
 												</p>
-												<p className="mt-2 inline-flex rounded-full bg-white/10 px-2 py-1 text-xs font-semibold text-white/80">
-													Popularidade: {person.popularity?.toFixed(1) ?? "-"}
-												</p>
+												<div className="mt-2 flex flex-wrap gap-1.5">
+													<span className="app-people-chip inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold sm:text-xs">
+														<TrendingUp className="h-3 w-3" />
+														{person.popularity?.toFixed(1) ?? "-"}
+													</span>
+													<span className="app-people-chip inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold sm:text-xs">
+														<Clapperboard className="h-3 w-3" />
+														{person.known_for_titles.length} títulos
+													</span>
+												</div>
 											</div>
 										</div>
-										<div className="mt-4 flex flex-wrap gap-2">
+										<div className="mt-3 flex flex-wrap gap-1.5">
 											{person.known_for_titles.length > 0 ? (
 												person.known_for_titles.map((knownTitle) => (
 													<span
 														key={`${person.id}-${knownTitle}`}
-														className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs text-white/70"
+														className="app-people-chip rounded-full border px-2 py-1 text-[11px] sm:text-xs"
 													>
 														{knownTitle}
 													</span>

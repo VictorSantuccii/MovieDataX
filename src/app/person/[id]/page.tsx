@@ -48,9 +48,10 @@ export default async function PersonDetailsPage({ params }: PageProps) {
 		};
 
 		return (
-			<main className="min-h-screen bg-[#0b0b0f] text-white">
+			<main className="app-internal-page min-h-screen text-white">
 				<section className="relative overflow-hidden px-6 pb-10 pt-16 sm:px-10 lg:px-16">
-					<div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#2b1a1a,transparent_55%),radial-gradient(circle_at_20%_30%,#2b1f0a,transparent_55%),radial-gradient(circle_at_80%_10%,#11202f,transparent_45%),linear-gradient(180deg,#0b0b0f_0%,#0f111a_40%,#111827_100%)]" />
+					<div className="app-internal-hero-bg absolute inset-0" />
+					<div className="app-internal-hero-glow absolute inset-x-0 top-20 h-40 blur-3xl" />
 					<div className="relative mx-auto grid max-w-6xl gap-8 lg:grid-cols-[260px_1fr]">
 						<div>
 							<Link
@@ -108,13 +109,13 @@ export default async function PersonDetailsPage({ params }: PageProps) {
 						<p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-200">
 							Títulos conhecidos
 						</p>
-						<div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+						<div className="mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:grid sm:snap-none sm:overflow-visible sm:pb-0 sm:gap-3 sm:grid-cols-2 lg:grid-cols-3">
 							{knownCast.length > 0 ? (
 								knownCast.map((credit) => (
 									<Link
 										key={`${credit.media_type}-${credit.id}-${credit.character ?? credit.job ?? ""}`}
 										href={`/title/${resolveCreditType(credit)}/${credit.id}?type=${resolveCreditType(credit)}&page=1`}
-										className="rounded-xl border border-white/10 bg-black/30 px-3 py-3 transition hover:-translate-y-0.5 hover:border-rose-300/50"
+										className="w-64 shrink-0 snap-start rounded-xl border border-white/10 bg-black/30 px-3 py-3 transition hover:-translate-y-0.5 hover:border-rose-300/50 sm:w-auto"
 									>
 										<p className="text-sm font-semibold text-white">{credit.title ?? credit.name ?? "-"}</p>
 										<p className="mt-1 text-xs text-white/70">
