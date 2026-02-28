@@ -9,13 +9,16 @@ import { motion, type Variants } from "framer-motion";
 import {
 	ArrowUpRight,
 	Award,
+	Calendar,
 	Clapperboard,
+	Clock3,
 	LineChart,
 	Search,
 	Sparkles,
 	Star,
 	TrendingUp,
 	Users,
+	X,
 } from "lucide-react";
 
 type TrendingApiResponse = {
@@ -79,6 +82,26 @@ type AwardSpot = {
 	first_air_date?: string;
 	vote_average?: number;
 	source_awards: string[];
+};
+
+type TrendingDetails = {
+	id: number;
+	media_type: "movie" | "tv";
+	title: string;
+	overview?: string;
+	tagline?: string;
+	poster_path?: string;
+	backdrop_path?: string;
+	release_date?: string;
+	first_air_date?: string;
+	status?: string;
+	runtime?: number;
+	episode_run_time?: number[];
+	vote_average?: number;
+	vote_count?: number;
+	popularity?: number;
+	homepage?: string;
+	genres?: Array<{ id: number; name: string }>;
 };
 
 const container: Variants = {
@@ -186,6 +209,11 @@ export default function Home() {
 	const [directors, setDirectors] = useState<DirectorSpot[]>(fallbackDirectors);
 	const [popularPeople, setPopularPeople] = useState<PopularPersonSpot[]>(fallbackPeople);
 	const [awards, setAwards] = useState<AwardSpot[]>(fallbackAwards);
+	const [isTrendingModalOpen, setIsTrendingModalOpen] = useState(false);
+	const [selectedTrendingId, setSelectedTrendingId] = useState<number | null>(null);
+	const [trendingDetails, setTrendingDetails] = useState<TrendingDetails | null>(null);
+	const [trendingDetailsLoading, setTrendingDetailsLoading] = useState(false);
+	const [trendingDetailsError, setTrendingDetailsError] = useState<string | null>(null);
 
 	const handleSearch = () => {
 		const trimmed = query.trim();
@@ -350,6 +378,35 @@ export default function Home() {
 	const getAwardYear = (item: AwardSpot) =>
 		item.release_date?.slice(0, 4) ?? item.first_air_date?.slice(0, 4) ?? "-";
 
+	const openTrendingModal = async (movieId: number) => {
+		setIsTrendingModalOpen(true);
+		setSelectedTrendingId(movieId);
+		setTrendingDetails(null);
+		setTrendingDetailsError(null);
+		setTrendingDetailsLoading(true);
+
+		try {
+			const response = await fetch(`/api/imdb/title-details?media_type=movie&id=${movieId}`);
+			if (!response.ok) {
+				throw new Error("Não foi possível carregar os dados do filme.");
+			}
+			const data = (await response.json()) as TrendingDetails;
+			setTrendingDetails(data);
+		} catch {
+			setTrendingDetailsError("Não foi possível carregar os dados do filme no momento.");
+		} finally {
+			setTrendingDetailsLoading(false);
+		}
+	};
+
+	const closeTrendingModal = () => {
+		setIsTrendingModalOpen(false);
+		setSelectedTrendingId(null);
+		setTrendingDetails(null);
+		setTrendingDetailsError(null);
+		setTrendingDetailsLoading(false);
+	};
+
 	return (
 		<main className="min-h-screen bg-[#0b0b0f] text-white">
 			<div className="relative overflow-hidden">
@@ -375,7 +432,7 @@ export default function Home() {
 								MovieDataX
 							</span>
 							<h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
-								Análise real de tendências e desempenho em um só painel.
+								Seu hub inteligente para explorar filmes e o que realmente importa no cinema.
 							</h1>
 							<p className="max-w-2xl text-base text-white/70 sm:text-lg">
 								Dados vivos do TMDB com recortes claros: nota media, faixa de anos e
@@ -415,6 +472,30 @@ export default function Home() {
 									<ArrowUpRight className="h-4 w-4" />
 									Explorar painéis
 								</button>
+
+								<div className="mt-2 grid gap-3 sm:grid-cols-3">
+									<Link
+										href="/titles"
+										className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:border-rose-300/60"
+									>
+										<p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/55">Catálogo</p>
+										<p className="mt-1 text-base font-semibold text-white">{topSearches.length} em destaque</p>
+									</Link>
+									<Link
+										href="/awards"
+										className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:border-rose-300/60"
+									>
+										<p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/55">Premiações</p>
+										<p className="mt-1 text-base font-semibold text-white">{awards.length} títulos premiados</p>
+									</Link>
+									<Link
+										href="/people"
+										className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:border-rose-300/60"
+									>
+										<p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/55">Pessoas</p>
+										<p className="mt-1 text-base font-semibold text-white">{popularPeople.length} perfis em alta</p>
+									</Link>
+								</div>
 							</div>
 
 							<div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/40">
@@ -426,9 +507,11 @@ export default function Home() {
 								</div>
 								<div className="mt-6 space-y-4">
 									{trending.map((movie) => (
-										<div
+										<button
+											type="button"
 											key={movie.id}
-											className="rounded-2xl border border-white/10 bg-linear-to-r from-white/5 via-white/10 to-white/5 px-4 py-3"
+											onClick={() => void openTrendingModal(movie.id)}
+											className="w-full rounded-2xl border border-white/10 bg-linear-to-r from-white/5 via-white/10 to-white/5 px-4 py-3 text-left transition hover:border-rose-300/50"
 										>
 											<div className="flex items-center justify-between">
 												<div>
@@ -449,7 +532,7 @@ export default function Home() {
 													</span>
 												</div>
 											</div>
-										</div>
+										</button>
 									))}
 								</div>
 							</div>
@@ -971,6 +1054,115 @@ export default function Home() {
 					</motion.div>
 				</motion.div>
 			</section>
+
+			{isTrendingModalOpen && (
+				<div className="fixed inset-0 z-90 flex items-center justify-center p-4 sm:p-6">
+					<button
+						type="button"
+						onClick={closeTrendingModal}
+						className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+						aria-label="Fechar modal"
+					/>
+					<div className="relative z-10 w-full max-w-4xl overflow-hidden rounded-3xl border border-white/10 bg-[#0b0d14] shadow-2xl shadow-black/60">
+						<button
+							type="button"
+							onClick={closeTrendingModal}
+							className="absolute right-3 top-3 z-20 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/80 transition hover:text-white"
+							aria-label="Fechar"
+						>
+							<X className="h-4 w-4" />
+						</button>
+
+						{trendingDetailsLoading && (
+							<div className="p-8 text-sm text-white/70">Carregando dados do filme...</div>
+						)}
+
+						{!trendingDetailsLoading && trendingDetailsError && (
+							<div className="p-8 text-sm text-white/70">{trendingDetailsError}</div>
+						)}
+
+						{!trendingDetailsLoading && !trendingDetailsError && trendingDetails && (
+							<div className="grid md:grid-cols-[280px_1fr]">
+								<div className="relative min-h-90 bg-white/10">
+									{trendingDetails.poster_path ? (
+										<Image
+											alt={trendingDetails.title}
+											src={`${imageBase}/w500${trendingDetails.poster_path}`}
+											fill
+											sizes="280px"
+											className="object-cover"
+										/>
+									) : (
+										<div className="flex h-full items-center justify-center text-sm text-white/60">Poster indisponível</div>
+									)}
+								</div>
+
+								<div className="space-y-5 p-6">
+									<div>
+										<p className="text-xs font-semibold uppercase tracking-[0.3em] text-rose-200">Tendência da semana</p>
+										<h3 className="mt-2 text-2xl font-semibold text-white">{trendingDetails.title}</h3>
+										{trendingDetails.tagline ? (
+											<p className="mt-2 text-sm text-white/70">{trendingDetails.tagline}</p>
+										) : null}
+									</div>
+
+									<div className="grid gap-2 sm:grid-cols-2">
+										<span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80">
+											<Star className="h-3.5 w-3.5 text-amber-300" />
+											Nota: {trendingDetails.vote_average?.toFixed(1) ?? "-"}
+										</span>
+										<span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80">
+											<Users className="h-3.5 w-3.5 text-rose-200" />
+											Votos: {trendingDetails.vote_count?.toLocaleString("pt-BR") ?? "-"}
+										</span>
+										<span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80">
+											<Calendar className="h-3.5 w-3.5 text-rose-200" />
+											Ano: {(trendingDetails.release_date ?? trendingDetails.first_air_date)?.slice(0, 4) ?? "-"}
+										</span>
+										<span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80">
+											<Clock3 className="h-3.5 w-3.5 text-rose-200" />
+											Duração: {trendingDetails.runtime ? `${trendingDetails.runtime} min` : (trendingDetails.episode_run_time?.[0] ? `${trendingDetails.episode_run_time[0]} min` : "-")}
+										</span>
+									</div>
+
+									{trendingDetails.genres && trendingDetails.genres.length > 0 && (
+										<div className="flex flex-wrap gap-2">
+											{trendingDetails.genres.slice(0, 6).map((genre) => (
+												<span key={genre.id} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-rose-200">
+													{genre.name}
+												</span>
+											))}
+										</div>
+									)}
+
+									<p className="text-sm leading-relaxed text-white/75">
+										{trendingDetails.overview || "Sem descrição disponível para este título."}
+									</p>
+
+									<div className="flex flex-wrap gap-2">
+										<Link
+											href={`/title/movie/${selectedTrendingId}?type=movie&page=1`}
+											className="inline-flex items-center gap-2 rounded-full bg-rose-600 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-rose-500"
+										>
+											Ver página completa
+										</Link>
+										{trendingDetails.homepage ? (
+											<Link
+												href={trendingDetails.homepage}
+												target="_blank"
+												rel="noreferrer"
+												className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/80 transition hover:text-white"
+											>
+												Site oficial
+											</Link>
+										) : null}
+									</div>
+								</div>
+							</div>
+						)}
+					</div>
+				</div>
+			)}
 		</main>
 	);
 }

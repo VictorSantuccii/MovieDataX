@@ -22,6 +22,64 @@ type AwardResult = {
 	source_awards: string[];
 };
 
+type AwardSection = {
+	award: string;
+	total_results: number;
+	available_years: number[];
+	results: AwardResult[];
+};
+
+const getItemYear = (item: Pick<AwardResult, "release_date" | "first_air_date">) => {
+	const raw = item.release_date ?? item.first_air_date;
+	if (!raw) {
+		return undefined;
+	}
+	const year = Number(raw.slice(0, 4));
+	return Number.isFinite(year) && year > 1800 ? year : undefined;
+};
+
+const getItemScore = (item: Pick<AwardResult, "vote_average" | "popularity">) =>
+	(item.vote_average ?? 0) * 10 + (item.popularity ?? 0);
+
+const buildAwardSections = (
+	items: AwardResult[],
+	awardLabels: string[],
+	limitPerAward: number
+): AwardSection[] => {
+	const sections = awardLabels.map((award) => {
+		const awardItems = items
+			.filter((item) => item.source_awards.includes(award))
+			.sort((a, b) => getItemScore(b) - getItemScore(a));
+
+		const years = [...new Set(awardItems.map((item) => getItemYear(item)).filter((year): year is number => year !== undefined))]
+			.sort((a, b) => b - a);
+
+		return {
+			award,
+			total_results: awardItems.length,
+			available_years: years,
+			results: awardItems.slice(0, limitPerAward),
+		};
+	});
+
+	return sections.filter((section) => section.total_results > 0);
+};
+
+const buildYearDistribution = (items: AwardResult[]) => {
+	const byYear = new Map<number, number>();
+	for (const item of items) {
+		const year = getItemYear(item);
+		if (!year) {
+			continue;
+		}
+		byYear.set(year, (byYear.get(year) ?? 0) + 1);
+	}
+
+	return [...byYear.entries()]
+		.sort((a, b) => b[0] - a[0])
+		.map(([year, count]) => ({ year, count }));
+};
+
 const awardSearches: AwardSearch[] = [
 	{ label: "Oscar", query: "academy award winner" },
 	{ label: "Globo de Ouro", query: "golden globe winner" },
@@ -35,8 +93,10 @@ export async function GET(request: Request) {
 		const requestUrl = new URL(request.url);
 		const pageParam = Number(requestUrl.searchParams.get("page") ?? 1);
 		const limitParam = Number(requestUrl.searchParams.get("limit") ?? 18);
+		const awardLimitParam = Number(requestUrl.searchParams.get("award_limit") ?? 12);
 		const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
 		const limit = Number.isFinite(limitParam) && limitParam > 0 ? limitParam : 18;
+		const awardLimit = Number.isFinite(awardLimitParam) && awardLimitParam > 0 ? awardLimitParam : 12;
 
 		const searchResponses = await Promise.allSettled(
 			awardSearches.map(async (award) => {
@@ -120,13 +180,12 @@ export async function GET(request: Request) {
 			});
 		}
 
-		const results = [...byId.values()]
-			.sort((a, b) => {
-				const scoreA = (a.vote_average ?? 0) * 10 + (a.popularity ?? 0);
-				const scoreB = (b.vote_average ?? 0) * 10 + (b.popularity ?? 0);
-				return scoreB - scoreA;
-			})
-			.slice(0, limit);
+		const normalizedItems = [...byId.values()]
+			.sort((a, b) => getItemScore(b) - getItemScore(a));
+
+		const results = normalizedItems.slice(0, limit);
+		const awardSections = buildAwardSections(normalizedItems, awardSearches.map((award) => award.label), awardLimit);
+		const yearDistribution = buildYearDistribution(normalizedItems);
 
 		if (results.length === 0) {
 			const [topMovies, topTv] = await Promise.all([
@@ -171,17 +230,22 @@ export async function GET(request: Request) {
 			}
 
 			const sortedFallback = [...uniqueFallback.values()]
-				.sort((a, b) => (b.vote_average ?? 0) - (a.vote_average ?? 0));
+				.sort((a, b) => getItemScore(b) - getItemScore(a));
 
 			const start = (page - 1) * limit;
 			const pagedFallback = sortedFallback.slice(start, start + limit);
 			const fallbackTotalPages = Math.max(1, Math.ceil(sortedFallback.length / limit));
+			const awardSectionsFallback = buildAwardSections(sortedFallback, awardSearches.map((award) => award.label), awardLimit);
+			const yearDistributionFallback = buildYearDistribution(sortedFallback);
 
 			return NextResponse.json({
 				page,
 				total_pages: fallbackTotalPages,
 				total_results: sortedFallback.length,
 				has_more: page < fallbackTotalPages,
+				available_awards: awardSearches.map((award) => award.label),
+				year_distribution: yearDistributionFallback,
+				award_sections: awardSectionsFallback,
 				results: pagedFallback,
 			});
 		}
@@ -191,6 +255,9 @@ export async function GET(request: Request) {
 			total_pages: maxTotalPages,
 			total_results: byId.size,
 			has_more: page < maxTotalPages,
+			available_awards: awardSearches.map((award) => award.label),
+			year_distribution: yearDistribution,
+			award_sections: awardSections,
 			results,
 		});
 	} catch (error) {
