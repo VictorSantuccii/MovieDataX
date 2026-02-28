@@ -180,7 +180,7 @@ export default function AwardsPage() {
 
 									<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 										{section.results.map((entry) => {
-											const poster = entry.poster_path ? `${imageBase}/w500${entry.poster_path}` : undefined;
+											const poster = entry.poster_path ? `${imageBase}/w500${entry.poster_path}` : "/placeholders/title-fallback.svg";
 											const year = entry.release_date?.slice(0, 4) ?? entry.first_air_date?.slice(0, 4) ?? "-";
 											const href = `/title/${entry.media_type}/${entry.id}?type=${entry.media_type}&page=1`;
 
@@ -192,11 +192,7 @@ export default function AwardsPage() {
 												>
 													<div className="flex gap-4">
 														<div className="relative h-32 w-24 overflow-hidden rounded-2xl bg-white/10">
-															{poster ? (
-																<Image alt={entry.title} src={poster} fill sizes="96px" className="object-cover" />
-															) : (
-																<div className="flex h-full items-center justify-center text-xs text-white/50">Sem poster</div>
-															)}
+															<Image alt={entry.title} src={poster} fill sizes="96px" className="object-cover" />
 														</div>
 														<div className="flex-1">
 															<p className="text-base font-semibold text-white">{entry.title}</p>

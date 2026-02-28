@@ -38,7 +38,7 @@ export async function GET(request: Request) {
 					getTitleReviews(mediaType, result.id),
 				]);
 
-				return { ...details, reviews };
+				return { ...details, media_type: mediaType, reviews };
 			})
 		);
 

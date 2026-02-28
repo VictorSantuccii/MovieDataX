@@ -3,6 +3,8 @@ import Link from "next/link";
 import { ArrowLeft, ChevronLeft, ChevronRight, Play, Star } from "lucide-react";
 
 import { discoverTitles, getTitleDetails, getTitleReviews } from "@/lib/imdb";
+import TitleGallery from "@/components/title-gallery";
+import TitleKeyboardNav from "@/components/title-keyboard-nav";
 
 type PageProps = {
 	params: Promise<{
@@ -78,6 +80,8 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 		const currentIndex = currentIds.indexOf(id);
 		const previousId = currentIndex > 0 ? currentIds[currentIndex - 1] : undefined;
 		const nextId = currentIndex >= 0 && currentIndex < currentIds.length - 1 ? currentIds[currentIndex + 1] : undefined;
+		const previousHref = previousId ? `/title/${mediaType}/${previousId}?${listBaseQuery}` : undefined;
+		const nextHref = nextId ? `/title/${mediaType}/${nextId}?${listBaseQuery}` : undefined;
 
 		const name = details.title ?? details.name ?? "-";
 		const year = details.release_date?.slice(0, 4) ?? details.first_air_date?.slice(0, 4) ?? "-";
@@ -86,7 +90,7 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 			: details.episode_run_time?.[0]
 				? `${details.episode_run_time[0]} min`
 				: "-";
-		const poster = details.poster_path ? `${imageBase}/w500${details.poster_path}` : undefined;
+		const poster = details.poster_path ? `${imageBase}/w500${details.poster_path}` : "/placeholders/title-fallback.svg";
 		const backdrop = details.backdrop_path
 			? `${imageBase}/w1280${details.backdrop_path}`
 			: undefined;
@@ -98,6 +102,9 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 		const cast = details.credits?.cast?.slice(0, 12) ?? [];
 		const genres = details.genres ?? [];
 		const reviewItems = reviews.results?.slice(0, 6) ?? [];
+		const galleryImages = [...(details.images?.backdrops ?? []), ...(details.images?.posters ?? [])].filter(
+			(image, index, array) => array.findIndex((entry) => entry.file_path === image.file_path) === index
+		);
 		const infoItems = [
 			{ label: "Tipo", value: mediaType === "movie" ? "Filme" : "Série" },
 			{ label: "Ano", value: year },
@@ -115,6 +122,7 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 
 		return (
 			<main className="app-title-page min-h-screen bg-[#0b0b0f] text-white">
+				<TitleKeyboardNav previousHref={previousHref} nextHref={nextHref} />
 				<section className="relative overflow-hidden px-6 pb-10 pt-16 sm:px-10 lg:px-16">
 					<div className="app-title-hero-bg absolute inset-0 bg-[radial-gradient(circle_at_top,#2b1a1a,transparent_55%),radial-gradient(circle_at_20%_30%,#2b1f0a,transparent_55%),radial-gradient(circle_at_80%_10%,#11202f,transparent_45%),linear-gradient(180deg,#0b0b0f_0%,#0f111a_40%,#111827_100%)]" />
 					{backdrop && (
@@ -138,19 +146,13 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 								Voltar
 							</Link>
 							<div className="app-title-poster-shell relative h-96 overflow-hidden rounded-2xl border border-white/15 bg-white/5 shadow-2xl shadow-black/50">
-								{poster ? (
-									<Image
-										alt={name}
-										src={poster}
-										fill
-										sizes="260px"
-										className="app-title-poster-image object-cover"
-									/>
-								) : (
-									<div className="flex h-full items-center justify-center text-sm text-white/70">
-										Poster indisponível
-									</div>
-								)}
+								<Image
+									alt={name}
+									src={poster}
+									fill
+									sizes="260px"
+									className="app-title-poster-image object-cover"
+								/>
 							</div>
 						</div>
 
@@ -160,12 +162,13 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 								<p className="mt-2 text-sm text-white/70">{details.tagline ?? ""}</p>
 								<div className="mt-4 flex flex-wrap gap-2">
 									{genres.map((genre) => (
-										<span
+										<Link
 											key={genre.id}
+											href={`/titles?type=${mediaType}&genre=${genre.id}&page=1`}
 											className="app-title-chip rounded-full border border-white/15 bg-black/30 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-rose-200"
 										>
 											{genre.name}
-										</span>
+										</Link>
 									))}
 								</div>
 							</div>
@@ -196,7 +199,7 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 							<div className="flex flex-wrap items-center gap-3">
 								{previousId ? (
 									<Link
-										href={`/title/${mediaType}/${previousId}?${listBaseQuery}`}
+										href={previousHref!}
 										className="app-title-pill inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/80 hover:text-white"
 									>
 										<ChevronLeft className="h-4 w-4" />
@@ -216,7 +219,7 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 
 								{nextId ? (
 									<Link
-										href={`/title/${mediaType}/${nextId}?${listBaseQuery}`}
+										href={nextHref!}
 										className="app-title-pill inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/80 hover:text-white"
 									>
 										Próximo
@@ -264,13 +267,14 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 							<div className="mt-4 grid gap-2">
 								{cast.length > 0 ? (
 									cast.map((member) => (
-										<div
+										<Link
 											key={member.id}
-											className="app-title-row rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-sm"
+											href={`/person/${member.id}`}
+											className="app-title-row rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-sm transition hover:-translate-y-0.5 hover:border-rose-300/50"
 										>
 											<span className="font-semibold text-white">{member.name}</span>
 											<span className="text-white/70"> {member.character ? `• ${member.character}` : ""}</span>
-										</div>
+										</Link>
 									))
 								) : (
 									<p className="text-sm text-white/70">Sem elenco disponível.</p>
@@ -282,7 +286,7 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 							<p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-200">
 								Reviews
 							</p>
-							<p className="mt-1 text-xs text-whjite/60">
+							<p className="mt-1 text-xs text-white/60">
 								Total: {reviews.total_results?.toLocaleString("pt-BR") ?? 0}
 							</p>
 							<div className="mt-4 grid gap-3">
@@ -306,6 +310,15 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 							</div>
 						</div>
 					</div>
+
+					{galleryImages.length > 0 && (
+						<div className="mx-auto mt-6 max-w-6xl">
+							<TitleGallery
+								title={name}
+								images={galleryImages.map((image) => `${imageBase}/w1280${image.file_path}`)}
+							/>
+						</div>
+					)}
 				</section>
 			</main>
 		);

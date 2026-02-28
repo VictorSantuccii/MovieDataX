@@ -28,11 +28,24 @@ export default async function PersonDetailsPage({ params }: PageProps) {
 
 	try {
 		const person = await getPersonDetails(id);
-		const profile = person.profile_path ? `${imageBase}/w500${person.profile_path}` : undefined;
+		const profile = person.profile_path ? `${imageBase}/w500${person.profile_path}` : "/placeholders/person-fallback.svg";
 		const knownCast = (person.combined_credits?.cast ?? [])
 			.filter((entry) => Boolean(entry.title ?? entry.name))
 			.sort((a, b) => (b.vote_average ?? 0) - (a.vote_average ?? 0))
 			.slice(0, 12);
+
+		const resolveCreditType = (credit: { media_type?: "movie" | "tv"; first_air_date?: string; release_date?: string }) => {
+			if (credit.media_type === "movie" || credit.media_type === "tv") {
+				return credit.media_type;
+			}
+			if (credit.first_air_date) {
+				return "tv";
+			}
+			if (credit.release_date) {
+				return "movie";
+			}
+			return "movie";
+		};
 
 		return (
 			<main className="min-h-screen bg-[#0b0b0f] text-white">
@@ -48,19 +61,13 @@ export default async function PersonDetailsPage({ params }: PageProps) {
 								Voltar
 							</Link>
 							<div className="relative h-96 overflow-hidden rounded-2xl border border-white/15 bg-white/5 shadow-2xl shadow-black/50">
-								{profile ? (
-									<Image
-										alt={person.name}
-										src={profile}
-										fill
-										sizes="260px"
-										className="object-cover"
-									/>
-								) : (
-									<div className="flex h-full items-center justify-center text-sm text-white/70">
-										Sem foto disponível
-									</div>
-								)}
+								<Image
+									alt={person.name}
+									src={profile}
+									fill
+									sizes="260px"
+									className="object-cover"
+								/>
 							</div>
 						</div>
 						<div className="space-y-6">
@@ -104,9 +111,10 @@ export default async function PersonDetailsPage({ params }: PageProps) {
 						<div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 							{knownCast.length > 0 ? (
 								knownCast.map((credit) => (
-									<div
+									<Link
 										key={`${credit.media_type}-${credit.id}-${credit.character ?? credit.job ?? ""}`}
-										className="rounded-xl border border-white/10 bg-black/30 px-3 py-3"
+										href={`/title/${resolveCreditType(credit)}/${credit.id}?type=${resolveCreditType(credit)}&page=1`}
+										className="rounded-xl border border-white/10 bg-black/30 px-3 py-3 transition hover:-translate-y-0.5 hover:border-rose-300/50"
 									>
 										<p className="text-sm font-semibold text-white">{credit.title ?? credit.name ?? "-"}</p>
 										<p className="mt-1 text-xs text-white/70">
@@ -116,7 +124,7 @@ export default async function PersonDetailsPage({ params }: PageProps) {
 											<Star className="h-3 w-3" />
 											{credit.vote_average?.toFixed(1) ?? "-"}
 										</p>
-									</div>
+									</Link>
 								))
 							) : (
 								<p className="text-sm text-white/70">Sem títulos conhecidos disponíveis.</p>

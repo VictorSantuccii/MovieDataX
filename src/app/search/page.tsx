@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { motion, type Variants } from "framer-motion";
-import { ArrowLeft, Loader2, Play, Search, Star, Ticket } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, Play, Search, Star, Ticket } from "lucide-react";
 
 type TmdbGenre = {
 	id: number;
@@ -99,6 +100,8 @@ type SearchResponse = {
 	results: TmdbDetails[];
 };
 
+type MediaFilter = "all" | "movie" | "tv";
+
 const container: Variants = {
 	hidden: { opacity: 0, y: 16 },
 	show: {
@@ -133,6 +136,13 @@ const formatMoney = (value?: number) => {
 	}).format(value);
 };
 
+const resolveMediaType = (title: Pick<TmdbDetails, "media_type" | "first_air_date">): "movie" | "tv" => {
+	if (title.media_type === "movie" || title.media_type === "tv") {
+		return title.media_type;
+	}
+	return title.first_air_date ? "tv" : "movie";
+};
+
 export default function SearchPage() {
 	const router = useRouter();
 	const [query, setQuery] = useState("");
@@ -145,7 +155,45 @@ export default function SearchPage() {
 	const [page, setPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(1);
 	const [totalResults, setTotalResults] = useState(0);
-	const [loadingMore, setLoadingMore] = useState(false);
+	const [mediaFilter, setMediaFilter] = useState<MediaFilter>("all");
+	const [minRating, setMinRating] = useState(0);
+	const [minYear, setMinYear] = useState("");
+
+	const buildSearchUrl = (options?: {
+		query?: string;
+		page?: number;
+		mediaFilter?: MediaFilter;
+		minRating?: number;
+		minYear?: string;
+	}) => {
+		const nextQuery = (options?.query ?? query).trim();
+		const nextPage = Math.max(1, options?.page ?? page);
+		const nextMediaFilter = options?.mediaFilter ?? mediaFilter;
+		const nextMinRating = options?.minRating ?? minRating;
+		const nextMinYear = options?.minYear ?? minYear;
+
+		const params = new URLSearchParams();
+		if (nextQuery) {
+			params.set("q", nextQuery);
+			params.set("page", String(nextPage));
+		}
+
+		if (nextMediaFilter !== "all") {
+			params.set("type", nextMediaFilter);
+		}
+
+		if (nextMinRating > 0) {
+			params.set("minRating", String(nextMinRating));
+		}
+
+		const nextMinYearNumber = Number(nextMinYear);
+		if (Number.isFinite(nextMinYearNumber) && nextMinYearNumber > 0) {
+			params.set("minYear", String(nextMinYearNumber));
+		}
+
+		const queryString = params.toString();
+		return queryString ? `/search?${queryString}` : "/search";
+	};
 
 	useEffect(() => {
 		if (typeof window === "undefined") {
@@ -155,6 +203,21 @@ export default function SearchPage() {
 		const readQueryFromUrl = () => {
 			const params = new URLSearchParams(window.location.search);
 			setQuery(params.get("q")?.trim() ?? "");
+
+			const rawPage = Number(params.get("page") ?? 1);
+			setPage(Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1);
+
+			const rawType = params.get("type");
+			const resolvedType: MediaFilter =
+				rawType === "movie" || rawType === "tv" ? rawType : "all";
+			setMediaFilter(resolvedType);
+
+			const rawMinRating = Number(params.get("minRating") ?? 0);
+			const resolvedMinRating = Number.isFinite(rawMinRating) && rawMinRating > 0 ? rawMinRating : 0;
+			setMinRating(resolvedMinRating);
+
+			const rawMinYear = Number(params.get("minYear") ?? 0);
+			setMinYear(Number.isFinite(rawMinYear) && rawMinYear > 0 ? String(rawMinYear) : "");
 		};
 
 		readQueryFromUrl();
@@ -178,7 +241,6 @@ export default function SearchPage() {
 		if (!query) {
 			console.info("[UI][search] empty query");
 			setResults([]);
-			setPage(1);
 			setTotalPages(1);
 			setTotalResults(0);
 			setStatus("idle");
@@ -186,13 +248,9 @@ export default function SearchPage() {
 		}
 
 		let isActive = true;
-		const loadResults = async (targetPage: number, append = false) => {
-			if (append) {
-				setLoadingMore(true);
-			} else {
-				setStatus("loading");
-			}
-			console.info("[UI][search] loading", { query, page: targetPage, append });
+		const loadResults = async (targetPage: number) => {
+			setStatus("loading");
+			console.info("[UI][search] loading", { query, page: targetPage });
 			try {
 				const response = await fetch(
 					`/api/imdb/search?q=${encodeURIComponent(query)}&page=${targetPage}`
@@ -214,16 +272,7 @@ export default function SearchPage() {
 					total: data.results?.length ?? 0,
 				});
 				if (isActive) {
-					setResults((previous) => {
-						if (!append) {
-							return data.results ?? [];
-						}
-						const seen = new Set(previous.map((item) => `${item.media_type}-${item.id}`));
-						const incoming = (data.results ?? []).filter(
-							(item) => !seen.has(`${item.media_type}-${item.id}`)
-						);
-						return [...previous, ...incoming];
-					});
+					setResults(data.results ?? []);
 					setPage(data.page ?? targetPage);
 					setTotalPages(Math.max(1, data.total_pages ?? 1));
 					setTotalResults(data.total_results ?? 0);
@@ -240,61 +289,66 @@ export default function SearchPage() {
 				}
 			} finally {
 				if (isActive) {
-					setLoadingMore(false);
+					// no-op
 				}
 			}
 		};
 
-		void loadResults(1, false);
+		void loadResults(page);
 
 		return () => {
 			isActive = false;
 		};
-	}, [query]);
+	}, [query, page]);
 
 	const total = totalResults || results.length;
+	const minYearNumber = Number(minYear);
+	const filteredResults = useMemo(() => {
+		return results.filter((title) => {
+			const resolvedMediaType = resolveMediaType(title);
+			if (mediaFilter !== "all" && resolvedMediaType !== mediaFilter) {
+				return false;
+			}
+
+			if (minRating > 0 && (title.vote_average ?? 0) < minRating) {
+				return false;
+			}
+
+			if (Number.isFinite(minYearNumber) && minYearNumber > 0) {
+				const releaseYear = Number(
+					(title.release_date ?? title.first_air_date ?? "").slice(0, 4)
+				);
+				if (!Number.isFinite(releaseYear) || releaseYear < minYearNumber) {
+					return false;
+				}
+			}
+
+			return true;
+		});
+	}, [mediaFilter, minRating, minYearNumber, results]);
+	const hasActiveFilters = mediaFilter !== "all" || minRating > 0 || (Number.isFinite(minYearNumber) && minYearNumber > 0);
+	const visibleCount = filteredResults.length;
 
 	const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 		const trimmed = searchInput.trim();
 		if (!trimmed) {
 			setQuery("");
+			setPage(1);
 			router.push("/search");
 			return;
 		}
 		setQuery(trimmed);
-		router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+		setPage(1);
+		router.push(buildSearchUrl({ query: trimmed, page: 1 }));
 	};
 
-	const handleLoadMore = async () => {
-		if (loadingMore || page >= totalPages || !query) {
+	const handlePageChange = (nextPage: number) => {
+		if (!query || nextPage < 1 || nextPage > totalPages || nextPage === page) {
 			return;
 		}
-
-		const nextPage = page + 1;
-		setLoadingMore(true);
-		try {
-			const response = await fetch(`/api/imdb/search?q=${encodeURIComponent(query)}&page=${nextPage}`);
-			if (!response.ok) {
-				throw new Error("Search failed");
-			}
-			const data = (await response.json()) as SearchResponse;
-			setResults((previous) => {
-				const seen = new Set(previous.map((item) => `${item.media_type}-${item.id}`));
-				const incoming = (data.results ?? []).filter(
-					(item) => !seen.has(`${item.media_type}-${item.id}`)
-				);
-				return [...previous, ...incoming];
-			});
-			setPage(data.page ?? nextPage);
-			setTotalPages(Math.max(1, data.total_pages ?? totalPages));
-			setTotalResults(data.total_results ?? totalResults);
-			setStatus("done");
-		} catch {
-			setStatus("error");
-		} finally {
-			setLoadingMore(false);
-		}
+		setPage(nextPage);
+		router.push(buildSearchUrl({ page: nextPage }));
 	};
 
 	const emptyState = useMemo(() => {
@@ -310,8 +364,11 @@ export default function SearchPage() {
 		if (status === "done" && total === 0) {
 			return "Nenhum título encontrado para esta busca.";
 		}
+		if (status === "done" && hasActiveFilters && visibleCount === 0) {
+			return "Nenhum título corresponde aos filtros selecionados nesta página.";
+		}
 		return "";
-	}, [query, status, total]);
+	}, [hasActiveFilters, query, status, total, visibleCount]);
 
 	return (
 		<main className="min-h-screen bg-[#0b0b0f] text-white">
@@ -344,7 +401,7 @@ export default function SearchPage() {
 					<motion.div variants={item}>
 						<form
 							onSubmit={handleSearchSubmit}
-							className="mb-4 flex w-full max-w-2xl items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-3"
+							className="mb-4 flex w-full max-w-2xl items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 sm:rounded-full"
 						>
 							<Search className="h-5 w-5 text-rose-200" />
 							<input
@@ -364,7 +421,92 @@ export default function SearchPage() {
 						<h1 className="text-3xl font-semibold text-white sm:text-4xl">
 							Busca por: {query || "-"}
 						</h1>
-						<p className="mt-3 text-sm text-white/60">{total} títulos encontrados.</p>
+						<p className="mt-3 text-sm text-white/60">
+							{hasActiveFilters
+								? `Mostrando ${visibleCount} de ${results.length} resultados desta página.`
+								: `${total} títulos encontrados.`}
+						</p>
+						<div className="mt-4 grid max-w-3xl gap-3 sm:grid-cols-3">
+							<label className="grid gap-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
+								Tipo
+								<select
+									value={mediaFilter}
+									onChange={(event) => {
+										const nextMediaFilter = event.target.value as MediaFilter;
+										setMediaFilter(nextMediaFilter);
+										setPage(1);
+										router.push(buildSearchUrl({ mediaFilter: nextMediaFilter, page: 1 }));
+									}}
+									className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/85 outline-none transition focus:border-rose-400/60"
+								>
+									<option value="all" className="bg-[#0b0b0f] text-white">Todos</option>
+									<option value="movie" className="bg-[#0b0b0f] text-white">Filmes</option>
+									<option value="tv" className="bg-[#0b0b0f] text-white">Séries</option>
+								</select>
+							</label>
+							<label className="grid gap-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
+								Nota mínima
+								<select
+									value={String(minRating)}
+									onChange={(event) => {
+										const nextMinRating = Number(event.target.value);
+										setMinRating(nextMinRating);
+										setPage(1);
+										router.push(buildSearchUrl({ minRating: nextMinRating, page: 1 }));
+									}}
+									className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/85 outline-none transition focus:border-rose-400/60"
+								>
+									<option value="0" className="bg-[#0b0b0f] text-white">Sem mínimo</option>
+									<option value="5" className="bg-[#0b0b0f] text-white">5.0+</option>
+									<option value="6" className="bg-[#0b0b0f] text-white">6.0+</option>
+									<option value="7" className="bg-[#0b0b0f] text-white">7.0+</option>
+									<option value="8" className="bg-[#0b0b0f] text-white">8.0+</option>
+								</select>
+							</label>
+							<label className="grid gap-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
+								Ano mínimo
+								<input
+									type="number"
+									inputMode="numeric"
+									min={1900}
+									max={new Date().getFullYear()}
+									value={minYear}
+									onChange={(event) => {
+										const nextMinYear = event.target.value;
+										setMinYear(nextMinYear);
+										setPage(1);
+										router.push(buildSearchUrl({ minYear: nextMinYear, page: 1 }));
+									}}
+									placeholder="Ex: 2018"
+									className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/85 placeholder:text-white/40 outline-none transition focus:border-rose-400/60"
+								/>
+							</label>
+						</div>
+						{query && totalPages > 0 && (
+							<div className="mt-4 flex flex-wrap items-center gap-2">
+								<button
+									type="button"
+									onClick={() => handlePageChange(page - 1)}
+									disabled={page <= 1 || status === "loading"}
+									className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/70 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+								>
+									<ChevronLeft className="h-4 w-4" />
+									Anterior
+								</button>
+								<span className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/70">
+									Página {page} de {totalPages}
+								</span>
+								<button
+									type="button"
+									onClick={() => handlePageChange(page + 1)}
+									disabled={page >= totalPages || status === "loading"}
+									className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/70 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+								>
+									Próxima
+									<ChevronRight className="h-4 w-4" />
+								</button>
+							</div>
+						)}
 					</motion.div>
 				</motion.div>
 			</section>
@@ -383,8 +525,9 @@ export default function SearchPage() {
 						</div>
 					) : (
 						<div className="grid gap-6">
-							{results.map((title) => {
+							{filteredResults.map((title) => {
 								const name = title.title ?? title.name ?? "-";
+								const resolvedMediaType = resolveMediaType(title);
 								const year = title.release_date
 									? title.release_date.slice(0, 4)
 									: title.first_air_date?.slice(0, 4) ?? "-";
@@ -399,7 +542,7 @@ export default function SearchPage() {
 								);
 								const poster = title.poster_path
 									? `${imageBase}/w500${title.poster_path}`
-									: undefined;
+									: "/placeholders/title-fallback.svg";
 								const backdrop = title.backdrop_path
 									? `${imageBase}/w780${title.backdrop_path}`
 									: undefined;
@@ -409,7 +552,7 @@ export default function SearchPage() {
 								const videosCount = title.videos?.results?.length ?? 0;
 								const reviews = title.reviews?.results ?? [];
 								const reviewsCount = title.reviews?.total_results ?? reviews.length;
-								const rowId = `${title.media_type}-${title.id}`;
+								const rowId = `${resolvedMediaType}-${title.id}`;
 								const isOpen = openId === rowId;
 								const director = title.credits?.crew?.find(
 									(member) => member.job === "Director"
@@ -419,9 +562,9 @@ export default function SearchPage() {
 								const leadName = director?.name ?? creator?.name ?? "-";
 								const status = title.status ?? "-";
 								const budget =
-									title.media_type === "movie" ? formatMoney(title.budget) : "-";
+									resolvedMediaType === "movie" ? formatMoney(title.budget) : "-";
 								const revenue =
-									title.media_type === "movie" ? formatMoney(title.revenue) : "-";
+									resolvedMediaType === "movie" ? formatMoney(title.revenue) : "-";
 
 								return (
 									<motion.article
@@ -432,23 +575,17 @@ export default function SearchPage() {
 										<div className="grid gap-6 p-6 lg:grid-cols-[200px_1fr]">
 											<div className="flex flex-col gap-4">
 												<div className="relative h-75 overflow-hidden rounded-2xl bg-white/10">
-													{poster ? (
-														<Image
-															alt={name}
-															src={poster}
-															fill
-															sizes="(min-width: 1024px) 200px, 60vw"
-															className="object-cover"
-														/>
-													) : (
-														<div className="flex h-75 items-center justify-center text-xs text-white/50">
-															Poster indisponível
-														</div>
-													)}
+													<Image
+														alt={name}
+														src={poster}
+														fill
+														sizes="(min-width: 1024px) 200px, 60vw"
+														className="object-cover"
+													/>
 												</div>
 												<div className="flex flex-wrap gap-2">
 													<span className="rounded-full bg-rose-500/20 px-2 py-1 text-xs font-semibold text-rose-200">
-														{title.media_type === "movie" ? "Filme" : "Série"}
+														{resolvedMediaType === "movie" ? "Filme" : "Série"}
 													</span>
 													<span className="rounded-full bg-white/10 px-2 py-1 text-xs font-semibold text-white/70">
 														{year}
@@ -484,12 +621,13 @@ export default function SearchPage() {
 
 												<div className="flex flex-wrap gap-2">
 													{title.genres?.slice(0, 4).map((genre) => (
-														<span
+														<Link
 															key={genre.id}
+															href={`/titles?type=${resolvedMediaType}&genre=${genre.id}&page=1`}
 															className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs font-semibold text-white/70"
 														>
 															{genre.name}
-														</span>
+														</Link>
 													))}
 												</div>
 
@@ -558,7 +696,7 @@ export default function SearchPage() {
 																		Tipo
 																	</p>
 																	<p className="mt-2 text-sm font-semibold text-white">
-																		{title.media_type === "movie" ? "Filme" : "Série"}
+																		{resolvedMediaType === "movie" ? "Filme" : "Série"}
 																	</p>
 																</div>
 																<div className="rounded-xl border border-white/10 bg-white/5 p-3">
@@ -639,50 +777,32 @@ export default function SearchPage() {
 																	{cast.map((person) => {
 																		const profile = person.profile_path
 																			? `${imageBase}/w185${person.profile_path}`
-																			: undefined;
+																			: "/placeholders/person-fallback.svg";
 
 																		return (
-																			<div
+																			<Link
 																				key={person.id}
-																				className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3"
+																				href={`/person/${person.id}`}
+																				className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 transition duration-300 hover:-translate-y-0.5 hover:border-rose-300/60 hover:bg-white/10"
 																			>
 																				<div className="relative h-10 w-10 overflow-hidden rounded-full bg-white/10">
-																					{profile ? (
-																						<Image
-																							alt={person.name}
-																							src={profile}
-																							fill
-																							sizes="40px"
-																							className="object-cover"
-																						/>
-																					) : (
-																						<div className="flex h-full items-center justify-center text-[10px] text-white/60">
-																							-
-																						</div>
-																					)}
+																					<Image
+																						alt={person.name}
+																						src={profile}
+																						fill
+																						sizes="40px"
+																						className="object-cover transition duration-300 group-hover:scale-110"
+																					/>
 																				</div>
 																				<div>
-																					<p className="text-xs font-semibold text-white">{person.name}</p>
+																					<p className="text-xs font-semibold text-white transition group-hover:text-rose-100">{person.name}</p>
 																					<p className="text-[10px] text-white/60">
 																						{person.character ?? "-"}
 																					</p>
 																				</div>
-																			</div>
+																			</Link>
 																		);
 																	})}
-																	{status === "done" && query && page < totalPages && (
-																		<div className="flex justify-center">
-																			<button
-																				type="button"
-																				onClick={handleLoadMore}
-																				disabled={loadingMore}
-																				className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-white/80 transition hover:border-rose-400/60 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-																			>
-																				{loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-																				{loadingMore ? "Carregando..." : "Mostrar mais filmes"}
-																			</button>
-																		</div>
-																	)}
 																</div>
 															)}
 														</div>
@@ -729,6 +849,31 @@ export default function SearchPage() {
 								</motion.article>
 							);
 						})}
+						{query && totalPages > 1 && (
+							<div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+								<button
+									type="button"
+									onClick={() => handlePageChange(page - 1)}
+									disabled={page <= 1 || status === "loading"}
+									className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/70 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+								>
+									<ChevronLeft className="h-4 w-4" />
+									Anterior
+								</button>
+								<span className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/70">
+									Página {page} de {totalPages}
+								</span>
+								<button
+									type="button"
+									onClick={() => handlePageChange(page + 1)}
+									disabled={page >= totalPages || status === "loading"}
+									className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/70 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+								>
+									Próxima
+									<ChevronRight className="h-4 w-4" />
+								</button>
+							</div>
+						)}
 					</div>
 				)}
 			</div>

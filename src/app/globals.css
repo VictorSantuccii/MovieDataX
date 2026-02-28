@@ -51,8 +51,86 @@ h6 {
   font-family: var(--font-poppins), sans-serif;
 }
 
+html {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(244, 63, 94, 0.65) rgba(15, 23, 42, 0.35);
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.35);
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(251, 113, 133, 0.92), rgba(225, 29, 72, 0.85));
+  border: 2px solid rgba(15, 23, 42, 0.35);
+  border-radius: 999px;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(251, 113, 133, 1), rgba(225, 29, 72, 0.95));
+}
+
+.app-chat-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(251, 113, 133, 0.95) rgba(15, 23, 42, 0.42);
+}
+
+.app-chat-scrollbar::-webkit-scrollbar {
+  width: 10px;
+}
+
+.app-chat-scrollbar::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.42);
+  border-radius: 999px;
+}
+
+.app-chat-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(253, 164, 175, 0.98), rgba(244, 63, 94, 0.96));
+  border: 2px solid rgba(15, 23, 42, 0.4);
+  border-radius: 999px;
+}
+
+.app-chat-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(253, 164, 175, 1), rgba(225, 29, 72, 0.98));
+}
+
 html[data-theme="light"] {
   color-scheme: light;
+}
+
+html[data-theme="light"] {
+  scrollbar-color: rgba(190, 24, 93, 0.7) rgba(148, 163, 184, 0.35);
+}
+
+html[data-theme="light"] ::-webkit-scrollbar-track {
+  background: rgba(148, 163, 184, 0.35);
+}
+
+html[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(244, 114, 182, 0.92), rgba(190, 24, 93, 0.85));
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+html[data-theme="light"] .app-chat-scrollbar {
+  scrollbar-color: rgba(190, 24, 93, 0.9) rgba(148, 163, 184, 0.38);
+}
+
+html[data-theme="light"] .app-chat-scrollbar::-webkit-scrollbar-track {
+  background: rgba(148, 163, 184, 0.38);
+}
+
+html[data-theme="light"] .app-chat-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(251, 113, 133, 0.95), rgba(190, 24, 93, 0.9));
+  border-color: rgba(148, 163, 184, 0.38);
 }
 
 html[data-theme="light"] body {
@@ -106,11 +184,27 @@ html[data-theme="light"] [class*="text-white/70"] {
 
 html[data-theme="light"] [class*="text-white/60"],
 html[data-theme="light"] [class*="text-white/50"] {
-  color: #475569 !important;
+  color: #334155 !important;
 }
 
 html[data-theme="light"] [class*="text-white/45"],
 html[data-theme="light"] [class*="text-white/40"] {
+  color: #475569 !important;
+}
+
+html[data-theme="light"] label,
+html[data-theme="light"] [role="label"] {
+  color: #334155 !important;
+}
+
+html[data-theme="light"] input,
+html[data-theme="light"] textarea,
+html[data-theme="light"] select {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] input::placeholder,
+html[data-theme="light"] textarea::placeholder {
   color: #64748b !important;
 }
 
@@ -285,6 +379,18 @@ html[data-theme="light"] .app-category-chip {
 
 html[data-theme="light"] .app-category-hint {
   color: #be123c !important;
+}
+
+html[data-theme="light"] .app-trend-rating {
+  background: rgba(15, 23, 42, 0.14) !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(100, 116, 139, 0.28);
+}
+
+html[data-theme="light"] .app-trend-change {
+  background: rgba(16, 185, 129, 0.18) !important;
+  color: #065f46 !important;
+  border: 1px solid rgba(16, 185, 129, 0.34);
 }
 
 @media (max-width: 640px) {

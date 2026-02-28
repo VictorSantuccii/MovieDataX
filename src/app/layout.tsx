@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Montserrat, Poppins } from "next/font/google";
 import Footer from "@/components/footer";
 import SidebarMenu from "@/components/sidebar-menu";
+import ChatbotWidget from "@/components/chatbot-widget";
 import ThemeToggle from "@/components/theme-toggle";
 import "./globals.css";
 
@@ -37,6 +38,7 @@ export default function RootLayout({
       <body className={`${montserrat.variable} ${poppins.variable} antialiased`}>
         <SidebarMenu />
         <ThemeToggle />
+        <ChatbotWidget />
         {children}
         <Footer />
       </body>

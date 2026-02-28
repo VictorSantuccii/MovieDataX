@@ -156,32 +156,26 @@ export default function PeoplePage() {
 							{people.map((person) => {
 								const profile = person.profile_path
 									? `${imageBase}/w500${person.profile_path}`
-									: undefined;
+									: "/placeholders/person-fallback.svg";
 
 								return (
 									<Link
 										key={`person-${person.id}`}
 										href={`/person/${person.id}`}
-										className="block rounded-3xl border border-white/10 bg-white/5 p-5 transition hover:-translate-y-1 hover:border-rose-300/50"
+										className="group block rounded-3xl border border-white/10 bg-white/5 p-5 transition duration-300 hover:-translate-y-1 hover:border-rose-300/60 hover:bg-white/10 hover:shadow-lg hover:shadow-rose-900/20"
 									>
 										<div className="flex gap-4">
 											<div className="relative h-32 w-24 overflow-hidden rounded-2xl bg-white/10">
-												{profile ? (
-													<Image
-														alt={person.name}
-														src={profile}
-														fill
-														sizes="96px"
-														className="object-cover"
-													/>
-												) : (
-													<div className="flex h-full items-center justify-center text-xs text-white/50">
-														Sem foto
-													</div>
-												)}
+												<Image
+													alt={person.name}
+													src={profile}
+													fill
+													sizes="96px"
+													className="object-cover transition duration-300 group-hover:scale-105"
+												/>
 											</div>
 											<div className="flex-1">
-												<p className="text-base font-semibold text-white">{person.name}</p>
+												<p className="text-base font-semibold text-white transition group-hover:text-rose-100">{person.name}</p>
 												<p className="mt-1 text-xs uppercase tracking-[0.2em] text-white/60">
 													{person.known_for_department ?? "Atuação"}
 												</p>

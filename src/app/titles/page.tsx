@@ -391,7 +391,7 @@ function TitlesPageContent() {
 
 						<form
 							onSubmit={handleSearchSubmit}
-							className="flex w-full max-w-xl items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-3"
+							className="flex w-full max-w-xl items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 sm:rounded-full"
 						>
 							<Search className="h-4 w-4 text-rose-200" />
 							<input
@@ -511,7 +511,7 @@ function TitlesPageContent() {
 								const year = getTitleYear(entry);
 								const poster = entry.poster_path
 									? `${imageBase}/w500${entry.poster_path}`
-									: undefined;
+									: "/placeholders/title-fallback.svg";
 
 								if (index < 3) {
 									console.info("[UI][titles] card.render", {
@@ -533,7 +533,6 @@ function TitlesPageContent() {
 											className="block"
 										>
 											<div className="app-category-poster relative h-72 bg-slate-800 sm:h-80 lg:h-72">
-											{poster ? (
 												<Image
 													alt={name}
 													src={poster}
@@ -555,11 +554,6 @@ function TitlesPageContent() {
 														});
 													}}
 												/>
-											) : (
-												<div className="app-category-empty-poster flex h-full items-center justify-center text-xs text-white/70">
-													Poster indisponível
-												</div>
-											)}
 											</div>
 											<div className="space-y-3 p-4">
 												<p className="line-clamp-2 min-h-10 text-base font-semibold text-white">{name}</p>

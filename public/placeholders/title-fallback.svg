@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="600" y2="900" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1f2937"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="120" y1="160" x2="480" y2="580" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fb7185"/>
+      <stop offset="1" stop-color="#f43f5e"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="900" rx="28" fill="url(#bg)"/>
+  <rect x="66" y="66" width="468" height="768" rx="24" fill="#111827" stroke="#334155" stroke-width="2"/>
+  <rect x="174" y="208" width="252" height="252" rx="28" fill="url(#accent)" opacity="0.92"/>
+  <path d="M257 276L360 334L257 392V276Z" fill="white" fill-opacity="0.9"/>
+  <text x="300" y="548" text-anchor="middle" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="38" font-weight="700">MovieDataX</text>
+  <text x="300" y="594" text-anchor="middle" fill="#94A3B8" font-family="Arial, sans-serif" font-size="24" font-weight="600">Poster indisponível</text>
+</svg>

@@ -449,7 +449,7 @@ export default function Home() {
 									Busque agora
 								</p>
 								<form
-									className="flex w-full max-w-md items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-3"
+									className="flex w-full max-w-md items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 sm:rounded-full"
 									onSubmit={(event) => {
 										event.preventDefault();
 										handleSearch();
@@ -523,11 +523,11 @@ export default function Home() {
 													</p>
 												</div>
 												<div className="flex items-center gap-2">
-													<span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-xs font-semibold text-white">
+													<span className="app-trend-rating inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-xs font-semibold text-white">
 														<Star className="h-3 w-3" />
 														{movie.rating}
 													</span>
-													<span className="rounded-full bg-emerald-500/20 px-2 py-1 text-xs font-semibold text-emerald-200">
+													<span className="app-trend-change rounded-full bg-emerald-500/20 px-2 py-1 text-xs font-semibold text-emerald-200">
 														{movie.trend}
 													</span>
 												</div>
@@ -647,7 +647,7 @@ export default function Home() {
 								const type = getTitleType(titleItem);
 								const poster = titleItem.poster_path
 									? `${imageBase}/w500${titleItem.poster_path}`
-									: undefined;
+									: "/placeholders/title-fallback.svg";
 
 								const href = getTitleHref(titleItem);
 								return (
@@ -657,19 +657,13 @@ export default function Home() {
 											variants={item}
 										>
 										<div className="app-poster-frame relative aspect-2/3 bg-white/10">
-											{poster ? (
-												<Image
-													alt={name}
-													src={poster}
-													fill
-													sizes="(min-width: 1024px) 12rem, (min-width: 640px) 40vw, 70vw"
-													className="object-cover"
-												/>
-											) : (
-												<div className="flex h-full items-center justify-center text-xs text-white/50">
-													Poster indisponível
-												</div>
-											)}
+											<Image
+												alt={name}
+												src={poster}
+												fill
+												sizes="(min-width: 1024px) 12rem, (min-width: 640px) 40vw, 70vw"
+												className="object-cover"
+											/>
 										</div>
 										<div className="app-poster-overlay absolute inset-0 bg-linear-to-t from-black/90 via-black/30 to-transparent" />
 										<div className="absolute bottom-0 left-0 right-0 p-4">
@@ -726,7 +720,7 @@ export default function Home() {
 								const type = getTitleType(titleItem);
 								const poster = titleItem.poster_path
 									? `${imageBase}/w500${titleItem.poster_path}`
-									: undefined;
+									: "/placeholders/title-fallback.svg";
 
 								const href = getTitleHref(titleItem);
 								return (
@@ -736,19 +730,13 @@ export default function Home() {
 											variants={item}
 										>
 										<div className="app-poster-frame relative aspect-2/3 bg-white/10">
-											{poster ? (
-												<Image
-													alt={name}
-													src={poster}
-													fill
-													sizes="(min-width: 1024px) 12rem, (min-width: 640px) 40vw, 70vw"
-													className="object-cover"
-												/>
-											) : (
-												<div className="flex h-full items-center justify-center text-xs text-white/50">
-													Poster indisponível
-												</div>
-											)}
+											<Image
+												alt={name}
+												src={poster}
+												fill
+												sizes="(min-width: 1024px) 12rem, (min-width: 640px) 40vw, 70vw"
+												className="object-cover"
+											/>
 										</div>
 										<div className="app-poster-overlay absolute inset-0 bg-linear-to-t from-black/90 via-black/30 to-transparent" />
 										<div className="absolute bottom-0 left-0 right-0 p-4">
@@ -804,7 +792,7 @@ export default function Home() {
 								const year = getTitleYear(titleItem);
 								const poster = titleItem.poster_path
 									? `${imageBase}/w500${titleItem.poster_path}`
-									: undefined;
+									: "/placeholders/title-fallback.svg";
 
 								const href = `/title/movie/${titleItem.id}?type=movie&page=1`;
 								return (
@@ -814,19 +802,13 @@ export default function Home() {
 											variants={item}
 										>
 										<div className="app-poster-frame relative h-32 w-24 overflow-hidden rounded-2xl bg-white/10">
-											{poster ? (
-												<Image
-													alt={name}
-													src={poster}
-													fill
-													sizes="96px"
-													className="object-cover"
-												/>
-											) : (
-												<div className="flex h-full items-center justify-center text-xs text-white/50">
-													Poster indisponível
-												</div>
-											)}
+											<Image
+												alt={name}
+												src={poster}
+												fill
+												sizes="96px"
+												className="object-cover"
+											/>
 										</div>
 										<div className="flex flex-1 flex-col justify-between">
 											<div>
@@ -868,7 +850,7 @@ export default function Home() {
 							{directors.map((entry) => {
 								const poster = entry.poster_path
 									? `${imageBase}/w500${entry.poster_path}`
-									: undefined;
+									: "/placeholders/title-fallback.svg";
 								const href = `/title/movie/${entry.id}?type=movie&page=1`;
 								const year = entry.release_date?.slice(0, 4) ?? "-";
 
@@ -879,19 +861,13 @@ export default function Home() {
 											variants={item}
 										>
 										<div className="app-poster-frame relative h-32 w-24 overflow-hidden rounded-2xl bg-white/10">
-											{poster ? (
-												<Image
-													alt={entry.title}
-													src={poster}
-													fill
-													sizes="96px"
-													className="object-cover"
-												/>
-											) : (
-												<div className="flex h-full items-center justify-center text-xs text-white/50">
-													Poster indisponível
-												</div>
-											)}
+											<Image
+												alt={entry.title}
+												src={poster}
+												fill
+												sizes="96px"
+												className="object-cover"
+											/>
 										</div>
 										<div className="flex flex-1 flex-col justify-between">
 											<div>
@@ -942,7 +918,7 @@ export default function Home() {
 							{popularPeople.map((person) => {
 								const profile = person.profile_path
 									? `${imageBase}/w500${person.profile_path}`
-									: undefined;
+									: "/placeholders/person-fallback.svg";
 
 								return (
 									<Link key={`person-${person.id}`} href={`/person/${person.id}`} className="block">
@@ -952,19 +928,13 @@ export default function Home() {
 										>
 										<div className="flex gap-4">
 											<div className="app-poster-frame relative h-32 w-24 overflow-hidden rounded-2xl bg-white/10">
-												{profile ? (
-													<Image
-														alt={person.name}
-														src={profile}
-														fill
-														sizes="96px"
-														className="object-cover"
-													/>
-												) : (
-													<div className="flex h-full items-center justify-center text-xs text-white/50">
-														Sem foto
-													</div>
-												)}
+												<Image
+													alt={person.name}
+													src={profile}
+													fill
+													sizes="96px"
+													className="object-cover"
+												/>
 											</div>
 											<div className="flex-1">
 												<p className="text-base font-semibold text-white">{person.name}</p>
@@ -1056,14 +1026,14 @@ export default function Home() {
 			</section>
 
 			{isTrendingModalOpen && (
-				<div className="fixed inset-0 z-90 flex items-center justify-center p-4 sm:p-6">
+				<div className="fixed inset-0 z-90 flex items-end justify-center overflow-y-auto p-3 sm:items-center sm:p-6">
 					<button
 						type="button"
 						onClick={closeTrendingModal}
 						className="absolute inset-0 bg-black/70 backdrop-blur-sm"
 						aria-label="Fechar modal"
 					/>
-					<div className="relative z-10 w-full max-w-4xl overflow-hidden rounded-3xl border border-white/10 bg-[#0b0d14] shadow-2xl shadow-black/60">
+					<div className="relative z-10 my-3 w-full max-w-4xl overflow-hidden rounded-2xl border border-white/10 bg-[#0b0d14] shadow-2xl shadow-black/60 sm:my-0 sm:rounded-3xl">
 						<button
 							type="button"
 							onClick={closeTrendingModal}
@@ -1082,25 +1052,21 @@ export default function Home() {
 						)}
 
 						{!trendingDetailsLoading && !trendingDetailsError && trendingDetails && (
-							<div className="grid md:grid-cols-[280px_1fr]">
-								<div className="relative min-h-90 bg-white/10">
-									{trendingDetails.poster_path ? (
-										<Image
-											alt={trendingDetails.title}
-											src={`${imageBase}/w500${trendingDetails.poster_path}`}
-											fill
-											sizes="280px"
-											className="object-cover"
-										/>
-									) : (
-										<div className="flex h-full items-center justify-center text-sm text-white/60">Poster indisponível</div>
-									)}
+							<div className="grid max-h-[calc(100vh-3rem)] md:grid-cols-[280px_1fr] sm:max-h-[calc(100vh-5rem)]">
+								<div className="relative h-56 bg-white/10 sm:h-72 md:h-auto md:min-h-90">
+									<Image
+										alt={trendingDetails.title}
+										src={trendingDetails.poster_path ? `${imageBase}/w500${trendingDetails.poster_path}` : "/placeholders/title-fallback.svg"}
+										fill
+										sizes="(min-width: 768px) 280px, 100vw"
+										className="object-cover"
+									/>
 								</div>
 
-								<div className="space-y-5 p-6">
+								<div className="space-y-4 overflow-y-auto p-4 pr-12 sm:p-6 sm:pr-14">
 									<div>
-										<p className="text-xs font-semibold uppercase tracking-[0.3em] text-rose-200">Tendência da semana</p>
-										<h3 className="mt-2 text-2xl font-semibold text-white">{trendingDetails.title}</h3>
+										<p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-rose-200 sm:text-xs sm:tracking-[0.3em]">Tendência da semana</p>
+										<h3 className="mt-2 text-xl font-semibold text-white sm:text-2xl">{trendingDetails.title}</h3>
 										{trendingDetails.tagline ? (
 											<p className="mt-2 text-sm text-white/70">{trendingDetails.tagline}</p>
 										) : null}
@@ -1142,7 +1108,7 @@ export default function Home() {
 									<div className="flex flex-wrap gap-2">
 										<Link
 											href={`/title/movie/${selectedTrendingId}?type=movie&page=1`}
-											className="inline-flex items-center gap-2 rounded-full bg-rose-600 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-rose-500"
+											className="inline-flex items-center gap-2 rounded-full bg-rose-600 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-white transition hover:bg-rose-500 sm:text-xs sm:tracking-[0.2em]"
 										>
 											Ver página completa
 										</Link>
@@ -1151,7 +1117,7 @@ export default function Home() {
 												href={trendingDetails.homepage}
 												target="_blank"
 												rel="noreferrer"
-												className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/80 transition hover:text-white"
+												className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-white/80 transition hover:text-white sm:text-xs sm:tracking-[0.2em]"
 											>
 												Site oficial
 											</Link>

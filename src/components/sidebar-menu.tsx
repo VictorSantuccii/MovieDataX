@@ -4,7 +4,7 @@ import type { ComponentType } from "react";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Clapperboard, Home, Menu, Search, Trophy, Users, X } from "lucide-react";
+import { Bot, Clapperboard, Home, Menu, Search, Trophy, Users, X } from "lucide-react";
 
 type MenuItem = {
 	label: string;
@@ -17,6 +17,7 @@ const menuItems: MenuItem[] = [
 	{ label: "Categorias", href: "/#categorias-destaque", icon: Clapperboard },
 	{ label: "Títulos", href: "/titles", icon: Clapperboard },
 	{ label: "Busca", href: "/search?q=", icon: Search },
+	{ label: "Chatbot ", href: "/assistant", icon: Bot },
 	{ label: "Atores", href: "/people", icon: Users },
 	{ label: "Premiações", href: "/awards", icon: Trophy },
 ];
