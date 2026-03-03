@@ -580,7 +580,7 @@ export default function Home() {
 								<span className="app-brand-kicker inline-flex items-center rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-rose-100/90 sm:text-[11px]">
 									Plataforma de cinema
 								</span>
-								<h2 className="app-brand-title mt-3 text-4xl font-black tracking-tight text-transparent bg-clip-text bg-linear-to-r from-rose-200 via-white to-sky-200 sm:text-5xl lg:text-6xl">
+								<h2 className="app-brand-title mt-3 text-5xl font-black tracking-tight text-transparent bg-clip-text bg-linear-to-r from-rose-200 via-white to-sky-200 sm:text-6xl lg:text-7xl">
 									MovieDataX
 								</h2>
 								<p className="app-brand-subtitle mx-auto mt-3 max-w-3xl text-base text-white/78 sm:text-lg lg:text-xl">
@@ -603,10 +603,10 @@ export default function Home() {
 									<div className="app-hero-overlay absolute inset-x-0 bottom-0 h-24 bg-linear-to-t from-black/70 to-transparent" />
 								</div>
 
-								<button type="button" onClick={() => shiftHero("prev")} className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/35 p-2 text-white/80 transition hover:text-white" aria-label="Anterior">
+								<button type="button" onClick={() => shiftHero("prev")} className="absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/20 bg-black/45 p-2 text-white/90 transition hover:text-white" aria-label="Anterior">
 									<ChevronLeft className="h-5 w-5" />
 								</button>
-								<button type="button" onClick={() => shiftHero("next")} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/35 p-2 text-white/80 transition hover:text-white" aria-label="Próximo">
+								<button type="button" onClick={() => shiftHero("next")} className="absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/20 bg-black/45 p-2 text-white/90 transition hover:text-white" aria-label="Próximo">
 									<ChevronRight className="h-5 w-5" />
 								</button>
 
@@ -653,7 +653,13 @@ export default function Home() {
 								<div>
 									<div className="mb-3 flex items-center justify-between">
 										<h2 className="text-2xl font-semibold text-white">Para você</h2>
-										<Link href="/titles" className="text-sm text-white/70 hover:text-white">Ver todos</Link>
+										<div className="flex items-center gap-2">
+											<div className="hidden items-center gap-2 lg:flex">
+												<button type="button" onClick={() => scrollRow("row-top", "prev")} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/80">Anterior</button>
+												<button type="button" onClick={() => scrollRow("row-top", "next")} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/80">Próximo</button>
+											</div>
+											<Link href="/titles" className="text-sm text-white/70 hover:text-white">Ver todos</Link>
+										</div>
 									</div>
 									<div ref={setRowRef("row-top")} className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
 										{topSearches.slice(0, 8).map((entry) => {
