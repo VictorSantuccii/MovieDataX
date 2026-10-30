@@ -35,6 +35,10 @@ export async function GET(request: Request) {
         popularity: details.popularity,
         homepage: details.homepage,
         genres: details.genres ?? [],
+        videos: (details.videos?.results ?? [])
+          .filter((video) => video.site === "YouTube" && video.type === "Trailer")
+          .slice(0, 5)
+          .map((video) => ({ key: video.key, name: video.name })),
       },
       CACHE_TTL.long,
     );

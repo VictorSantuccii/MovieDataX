@@ -11,12 +11,18 @@ export async function GET(request: Request) {
     const genreParam = searchParams.get("genre");
     const minRating = Number(searchParams.get("minRating") ?? 0);
     const minYear = Number(searchParams.get("minYear") ?? 0);
+    const maxYear = Number(searchParams.get("maxYear") ?? 0);
+    const sortBy = searchParams.get("sortBy") ?? undefined;
+    const minVotes = Number(searchParams.get("minVotes") ?? 0);
     const page = Number(searchParams.get("page") ?? 1);
 
     const data = await discoverTitles(mediaType, {
       genreId: genreParam ? Number(genreParam) : undefined,
       minRating: Number.isFinite(minRating) ? minRating : 0,
       minYear: Number.isFinite(minYear) ? minYear : 0,
+      maxYear: Number.isFinite(maxYear) ? maxYear : 0,
+      sortBy,
+      minVotes: Number.isFinite(minVotes) ? minVotes : 0,
       page: Number.isFinite(page) && page > 0 ? page : 1,
     });
 

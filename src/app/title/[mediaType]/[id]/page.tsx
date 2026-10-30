@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, ChevronLeft, ChevronRight, Play, Star } from "lucide-react";
+import { ChevronLeft, ChevronRight, Play, Star } from "lucide-react";
 
 import { discoverTitles, getTitleDetails, getTitleReviews } from "@/lib/imdb";
 import TitleGallery from "@/components/title-gallery";
@@ -137,21 +137,14 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 					)}
 					<div className="app-title-hero-overlay absolute inset-0 bg-linear-to-b from-black/65 via-black/55 to-[#0b0b0f]" />
 
-					<div className="relative mx-auto grid max-w-6xl gap-6 lg:grid-cols-[220px_1fr]">
+					<div className="relative mx-auto grid max-w-6xl gap-7 lg:grid-cols-[280px_1fr]">
 						<div>
-							<Link
-								href={`/titles?${listBaseQuery}`}
-								className="app-title-pill mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/35 px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-white/80 transition hover:text-white"
-							>
-								<ArrowLeft className="h-4 w-4" />
-								Voltar
-							</Link>
-							<div className="app-title-poster-shell relative h-80 overflow-hidden rounded-2xl border border-white/15 bg-white/5 shadow-2xl shadow-black/50 sm:h-90">
+							<div className="app-title-poster-shell relative h-[27rem] overflow-hidden rounded-3xl border border-white/15 bg-white/5 shadow-2xl shadow-black/50 sm:h-[32rem]">
 								<Image
 									alt={name}
 									src={poster}
 									fill
-									sizes="220px"
+									sizes="280px"
 									className="app-title-poster-image object-cover"
 								/>
 							</div>
@@ -174,16 +167,39 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 								</div>
 							</div>
 
-							<div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+							{trailer && (
+								<div id="trailer-player" className="app-title-trailer overflow-hidden rounded-3xl border border-white/10 bg-black/35 shadow-2xl shadow-black/30">
+									<div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+										<div>
+											<p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-200">Trailer oficial</p>
+											<p className="mt-1 text-xs text-white/60">{name}</p>
+										</div>
+										<Play className="h-4 w-4 text-rose-300" />
+									</div>
+									<div className="aspect-video">
+										<iframe
+											src={`https://www.youtube.com/embed/${trailer.key}`}
+											title={`Trailer de ${name}`}
+											allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+											referrerPolicy="strict-origin-when-cross-origin"
+											allowFullScreen
+											className="h-full w-full"
+										/>
+									</div>
+								</div>
+							)}
+
+							<div className="app-title-info-grid grid gap-2 sm:grid-cols-2">
 								{infoItems.map((info) => (
 									<div
 										key={info.label}
-										className="app-title-info-card rounded-xl border border-white/10 bg-black/30 px-3 py-2.5"
+										className="app-title-info-card group relative overflow-hidden rounded-xl border border-white/10 bg-black/30 px-3 py-2.5"
 									>
-										<p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/50">
+										<span className="absolute right-0 top-0 h-10 w-10 rounded-bl-full bg-rose-400/10 transition group-hover:bg-rose-400/20" />
+										<p className="relative text-[10px] font-semibold uppercase tracking-[0.24em] text-white/50">
 											{info.label}
 										</p>
-										<p className="mt-1 text-xs text-white sm:text-sm">{info.value}</p>
+										<p className="relative mt-1 truncate text-sm font-semibold text-white sm:text-base">{info.value}</p>
 									</div>
 								))}
 							</div>
@@ -254,20 +270,6 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 								)}
 							</div>
 
-							{trailer && (
-								<div id="trailer-player" className="app-title-panel overflow-hidden rounded-2xl border border-white/10 bg-black/35">
-									<div className="aspect-video">
-										<iframe
-											src={`https://www.youtube.com/embed/${trailer.key}`}
-											title={`Trailer de ${name}`}
-											allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-											referrerPolicy="strict-origin-when-cross-origin"
-											allowFullScreen
-											className="h-full w-full"
-										/>
-									</div>
-								</div>
-							)}
 						</div>
 					</div>
 				</section>
@@ -278,16 +280,27 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 							<p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-200">
 								Elenco principal
 							</p>
-							<div className="mt-4 grid gap-2">
+							<div className="mt-4 grid gap-3 sm:grid-cols-2">
 								{cast.length > 0 ? (
 									cast.map((member) => (
 										<Link
 											key={member.id}
 											href={`/person/${member.id}`}
-											className="app-title-row rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-sm transition hover:-translate-y-0.5 hover:border-rose-300/50"
+											className="app-cast-card group flex min-h-20 items-center gap-3 rounded-xl border border-white/10 bg-black/25 p-2.5 text-sm transition hover:-translate-y-1 hover:border-rose-300/50"
 										>
-											<span className="font-semibold text-white">{member.name}</span>
-											<span className="text-white/70"> {member.character ? `• ${member.character}` : ""}</span>
+											<div className="relative h-16 w-12 shrink-0 overflow-hidden rounded-lg bg-white/10">
+												<Image
+													alt={member.name}
+													src={member.profile_path ? `${imageBase}/w185${member.profile_path}` : "/placeholders/person-fallback.svg"}
+													fill
+													sizes="48px"
+													className="object-cover transition duration-500 group-hover:scale-105"
+												/>
+											</div>
+											<div className="min-w-0">
+												<p className="truncate font-semibold text-white">{member.name}</p>
+												<p className="mt-1 truncate text-xs text-white/60">{member.character ?? "Elenco"}</p>
+											</div>
 										</Link>
 									))
 								) : (
@@ -308,7 +321,7 @@ export default async function TitleDetailsPage({ params, searchParams }: PagePro
 									reviewItems.map((review) => (
 										<div
 											key={review.id}
-											className="app-title-row rounded-lg border border-white/10 bg-black/25 px-3 py-3"
+											className="app-review-card rounded-xl border border-white/10 bg-black/25 px-4 py-3"
 										>
 											<p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
 												{review.author}

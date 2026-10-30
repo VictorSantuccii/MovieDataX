@@ -149,28 +149,32 @@ export default function AssistantPage() {
 
 	return (
 		<main className="app-internal-page min-h-screen text-white">
-			<section className="relative overflow-hidden px-6 pb-10 pt-16 sm:px-10 lg:px-16">
+			<section className="relative overflow-hidden px-6 pb-8 pt-8 sm:px-10 lg:px-16">
 				<div className="app-internal-hero-bg absolute inset-0" />
 				<div className="app-internal-hero-glow absolute inset-x-0 top-20 h-40 blur-3xl" />
 
-				<div className="relative mx-auto max-w-6xl">
-					<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-rose-200">
-						<Bot className="h-4 w-4" />
-						Axel • Chatbot cinéfilo
+				<div className="relative mx-auto max-w-7xl text-center">
+					<div className="mb-3 flex items-center justify-center gap-3">
+						<span className="h-px w-10 bg-rose-400/70 sm:w-16" />
+						<span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-rose-200/80">
+							<Bot className="h-4 w-4" />
+							Axel • Chatbot cinéfilo
+						</span>
+						<span className="h-px w-10 bg-rose-400/70 sm:w-16" />
 					</div>
-					<h1 className="mt-6 text-3xl font-semibold text-white sm:text-4xl">Axel: recomendações inteligentes de filmes e séries</h1>
-					<p className="mt-3 max-w-3xl text-sm text-white/65 sm:text-base">
+					<h1 className="text-4xl font-semibold leading-tight tracking-tight text-white sm:text-6xl">Assistente</h1>
+					<p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-white/55 sm:text-base">
 						Converse com a IA para receber indicações personalizadas com base em dados recentes do TMDB. Este assistente recomenda apenas conteúdo de cinema e TV.
 					</p>
 				</div>
 			</section>
 
 			<section className="px-6 pb-20 sm:px-10 lg:px-16">
-				<div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-					<div className="rounded-3xl border border-white/10 bg-white/5 p-5 sm:p-6">
-						<div className="space-y-4">
+				<div className="mx-auto grid max-w-7xl gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)]">
+					<div className="app-assistant-chat rounded-[2rem] border p-4 shadow-2xl sm:p-6">
+						<div className="app-assistant-messages space-y-4">
 							{messages.map((message) => (
-								<div key={message.id} className={`rounded-2xl border px-4 py-3 ${message.role === "assistant" ? "border-white/10 bg-white/5" : "border-rose-300/40 bg-rose-500/15"}`}>
+								<div key={message.id} className={`app-assistant-message rounded-2xl border px-4 py-3 ${message.role === "assistant" ? "app-assistant-message-bot" : "app-assistant-message-user"}`}>
 									<p className="text-[10px] font-semibold uppercase tracking-[0.26em] text-white/55">
 										{message.role === "assistant" ? "Axel 🎬" : "Você"}
 									</p>
@@ -222,18 +226,18 @@ export default function AssistantPage() {
 
 						{error && <p className="mt-4 text-sm text-rose-300">{error}</p>}
 
-						<form onSubmit={handleSend} className="mt-6 flex flex-col gap-2 sm:flex-row">
+						<form onSubmit={handleSend} className="app-assistant-composer mt-5 flex flex-col gap-2 rounded-2xl border p-2 sm:flex-row">
 							<input
 								type="text"
 								value={input}
 								onChange={(event) => setInput(event.target.value)}
 								placeholder="Ex: Quero uma série de suspense com alta nota e poucos episódios"
-								className="w-full rounded-full border border-white/10 bg-white/5 px-4 py-3 text-base text-white/90 placeholder:text-white/40 focus:outline-none sm:text-sm"
+								className="app-assistant-input min-w-0 flex-1 rounded-xl border px-4 py-3 text-base text-white/90 placeholder:text-white/40 focus:outline-none sm:text-sm"
 							/>
 							<button
 								type="submit"
 								disabled={!canSend}
-								className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-rose-600 px-5 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+								className="app-assistant-send inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-white transition disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
 							>
 								<Send className="h-4 w-4" />
 								{loading ? "Enviando" : "Enviar"}
@@ -242,7 +246,7 @@ export default function AssistantPage() {
 					</div>
 
 					<div className="space-y-4">
-						<div className="hidden rounded-3xl border border-white/10 bg-white/5 p-5 sm:block">
+						<div className="app-assistant-side hidden rounded-3xl border p-5 sm:block">
 							<p className="text-xs font-semibold uppercase tracking-[0.28em] text-rose-200">Perguntas rápidas</p>
 							<div className="mt-4 flex flex-wrap gap-2">
 								{suggestionChips.map((chip) => (
@@ -258,7 +262,7 @@ export default function AssistantPage() {
 							</div>
 						</div>
 
-						<div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+						<div className="app-assistant-side rounded-3xl border p-5">
 							<p className="text-xs font-semibold uppercase tracking-[0.28em] text-rose-200">Escopo da IA</p>
 							<ul className="mt-3 space-y-2 text-sm text-white/75">
 								<li className="flex items-start gap-2"><Clapperboard className="mt-0.5 h-4 w-4 text-rose-200" />Recomenda apenas filmes e séries/TV.</li>

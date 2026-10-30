@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { motion, type Variants } from "framer-motion";
-import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, Play, Search, Star, Ticket } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Play, Search, Star, Ticket } from "lucide-react";
 
 type TmdbGenre = {
 	id: number;
@@ -117,7 +117,6 @@ const item: Variants = {
 };
 
 const imageBase = "https://image.tmdb.org/t/p";
-
 const formatDate = (value?: string) => {
 	if (!value) {
 		return "-";
@@ -158,6 +157,7 @@ export default function SearchPage() {
 	const [mediaFilter, setMediaFilter] = useState<MediaFilter>("all");
 	const [minRating, setMinRating] = useState(0);
 	const [minYear, setMinYear] = useState("");
+	const [resultSection, setResultSection] = useState<"all" | "rating" | "recent">("all");
 
 	const buildSearchUrl = (options?: {
 		query?: string;
@@ -202,7 +202,8 @@ export default function SearchPage() {
 
 		const readQueryFromUrl = () => {
 			const params = new URLSearchParams(window.location.search);
-			setQuery(params.get("q")?.trim() ?? "");
+			const queryFromUrl = params.get("q")?.trim() ?? "";
+			setQuery(queryFromUrl);
 
 			const rawPage = Number(params.get("page") ?? 1);
 			setPage(Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1);
@@ -224,14 +225,6 @@ export default function SearchPage() {
 		window.addEventListener("popstate", readQueryFromUrl);
 		return () => window.removeEventListener("popstate", readQueryFromUrl);
 	}, []);
-
-	const handleBack = () => {
-		if (typeof window !== "undefined" && window.history.length > 1) {
-			router.back();
-			return;
-		}
-		router.push("/");
-	};
 
 	useEffect(() => {
 		setSearchInput(query);
@@ -306,6 +299,17 @@ export default function SearchPage() {
 	}, [mediaFilter, minRating, minYearNumber, results]);
 	const hasActiveFilters = mediaFilter !== "all" || minRating > 0 || (Number.isFinite(minYearNumber) && minYearNumber > 0);
 	const visibleCount = filteredResults.length;
+	const displayedResults = useMemo(() => {
+		if (resultSection === "rating") {
+			return [...filteredResults].sort((a, b) => (b.vote_average ?? 0) - (a.vote_average ?? 0));
+		}
+		if (resultSection === "recent") {
+			return [...filteredResults].sort((a, b) =>
+				(b.release_date ?? b.first_air_date ?? "").localeCompare(a.release_date ?? a.first_air_date ?? "")
+			);
+		}
+		return filteredResults;
+	}, [filteredResults, resultSection]);
 
 	const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
@@ -350,34 +354,33 @@ export default function SearchPage() {
 
 	return (
 		<main className="app-search-page min-h-screen text-white">
-			<section className="relative overflow-hidden px-6 pb-12 pt-16 sm:px-10 lg:px-16">
+			<section className="relative overflow-hidden px-6 pb-8 pt-8 sm:px-10 lg:px-16">
 				<div className="app-search-hero-bg absolute inset-0" />
 				<div className="app-search-hero-glow absolute inset-x-0 top-20 h-40 blur-3xl" />
 				<motion.div
-					className="relative mx-auto grid max-w-6xl gap-6"
+					className="relative mx-auto grid max-w-7xl gap-5"
 					variants={container}
 					initial={false}
 					animate="show"
 				>
-					<motion.div className="flex flex-wrap items-center gap-3" variants={item}>
-						<button
-							type="button"
-							onClick={handleBack}
-							className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/70 transition hover:text-white"
-						>
-							<ArrowLeft className="h-4 w-4" />
-							Voltar
-						</button>
-						<span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase text-rose-200">
-							<Ticket className="h-4 w-4" />
-							Busca
-						</span>
-
+					<motion.div className="flex justify-center" variants={item}>
+						<div className="flex items-center gap-3">
+							<span className="h-px w-10 bg-rose-400/70 sm:w-16" />
+							<span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-rose-200/80">
+								<Ticket className="h-4 w-4" />
+								Catálogo MovieDataX
+							</span>
+							<span className="h-px w-10 bg-rose-400/70 sm:w-16" />
+						</div>
 					</motion.div>
-					<motion.div variants={item}>
+					<motion.div className="mx-auto w-full max-w-4xl text-center" variants={item}>
+						<h1 className="text-4xl font-semibold leading-tight tracking-tight text-white sm:text-6xl">
+							Busca
+						</h1>
+						<p className="mt-2 text-sm leading-6 text-white/55 sm:text-base">Encontre filmes e séries para a sua próxima sessão.</p>
 						<form
 							onSubmit={handleSearchSubmit}
-							className="app-search-form mb-4 flex w-full max-w-2xl items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 sm:rounded-full"
+							className="app-search-form mx-auto mt-5 flex w-full max-w-3xl items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 sm:rounded-full"
 						>
 							<Search className="h-5 w-5 text-rose-200" />
 							<input
@@ -394,15 +397,14 @@ export default function SearchPage() {
 								Buscar
 							</button>
 						</form>
-						<h1 className="text-3xl font-semibold text-white sm:text-4xl">
-							Busca por: {query || "-"}
-						</h1>
-						<p className="mt-3 text-sm text-white/60">
+						<p className="mt-2 text-sm text-white/60 sm:text-base">
+							{query ? <>Resultados para <strong className="text-rose-200">{query}</strong></> : "Encontre seu próximo título"}
+							<span className="mx-2 text-white/25">•</span>
 							{hasActiveFilters
 								? `Mostrando ${visibleCount} de ${results.length} resultados desta página.`
 								: `${total} títulos encontrados.`}
 						</p>
-						<div className="mt-4 grid max-w-3xl gap-3 sm:grid-cols-3">
+						<div className="app-search-filter-panel mt-6 grid max-w-4xl gap-4 rounded-[2rem] border p-5 text-left shadow-2xl sm:grid-cols-3 sm:p-6">
 							<label className="app-search-filter-label grid gap-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
 								Tipo
 								<select
@@ -483,12 +485,28 @@ export default function SearchPage() {
 								</button>
 							</div>
 						)}
+						<div className="mt-5 flex flex-wrap justify-center gap-2">
+							{[
+								["all", "Todos os resultados"],
+								["rating", "Melhor avaliados"],
+								["recent", "Mais recentes"],
+							].map(([value, label]) => (
+								<button
+									key={value}
+									type="button"
+									onClick={() => setResultSection(value as "all" | "rating" | "recent")}
+									className={`rounded-full border px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] transition ${resultSection === value ? "border-rose-400/60 bg-rose-500/20 text-rose-100" : "border-white/10 bg-white/5 text-white/60 hover:border-rose-300/40 hover:text-white"}`}
+								>
+									{label}
+								</button>
+							))}
+						</div>
 					</motion.div>
 				</motion.div>
 			</section>
 
 			<section className="px-6 pb-20 sm:px-10 lg:px-16">
-				<div className="mx-auto max-w-6xl">
+				<div className="mx-auto max-w-7xl">
 					{emptyState ? (
 						<div className="app-search-empty rounded-3xl border border-white/10 bg-white/5 p-8 text-sm text-white/70">
 							{status === "loading" && (
@@ -500,8 +518,16 @@ export default function SearchPage() {
 							<p>{emptyState}</p>
 						</div>
 					) : (
-						<div className="grid gap-6">
-							{filteredResults.map((title) => {
+						<div>
+							<div className="mb-4 flex items-end justify-between border-b border-white/10 pb-3">
+								<div>
+									<p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-rose-200">Curadoria da busca</p>
+									<h2 className="mt-1 text-xl font-semibold text-white">{resultSection === "rating" ? "Melhor avaliados" : resultSection === "recent" ? "Mais recentes" : "Resultados encontrados"}</h2>
+								</div>
+								<span className="text-xs text-white/50">{displayedResults.length} títulos</span>
+							</div>
+							<div className="grid items-start gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+							{displayedResults.map((title) => {
 								const name = title.title ?? title.name ?? "-";
 								const resolvedMediaType = resolveMediaType(title);
 								const year = title.release_date
@@ -545,25 +571,26 @@ export default function SearchPage() {
 								return (
 									<motion.article
 										key={rowId}
-										className="app-search-card overflow-hidden rounded-3xl border border-white/10 bg-white/5"
+										className="app-search-card group overflow-hidden rounded-2xl border border-white/10 bg-white/5 transition duration-300 hover:-translate-y-1"
 										variants={item}
 									>
-										<div className="grid gap-5 p-5 lg:grid-cols-[180px_1fr]">
-											<div className="flex flex-col gap-4">
-												<div className="app-search-poster relative h-62 overflow-hidden rounded-2xl bg-white/10 sm:h-68">
+										<div className="p-3">
+											<div className="flex flex-col gap-3">
+												<div className="app-search-poster relative aspect-[2/3] overflow-hidden rounded-xl bg-white/10">
 													<Image
 														alt={name}
 														src={poster}
 														fill
-														sizes="(min-width: 1024px) 180px, 60vw"
-														className="object-cover"
+														sizes="(min-width: 1280px) 14vw, (min-width: 640px) 22vw, 42vw"
+														className="object-cover transition duration-500 group-hover:scale-105"
 													/>
+													<div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/75 to-transparent" />
 												</div>
-												<div className="flex flex-wrap gap-2">
+												<div className="flex flex-wrap gap-1.5">
 													<span className="app-search-chip rounded-full bg-rose-500/20 px-2 py-1 text-xs font-semibold text-rose-200">
 														{resolvedMediaType === "movie" ? "Filme" : "Série"}
 													</span>
-													<span className="app-search-chip rounded-full bg-white/10 px-2 py-1 text-xs font-semibold text-white/70">
+													<span className="app-search-chip rounded-full bg-white/10 px-2 py-1 text-[11px] font-semibold text-white/70">
 														{year}
 													</span>
 												</div>
@@ -572,12 +599,12 @@ export default function SearchPage() {
 											<div className="space-y-3">
 												<div className="flex flex-wrap items-center justify-between gap-3">
 													<div>
-														<h2 className="text-xl font-semibold text-white">{name}</h2>
-														<p className="text-sm uppercase tracking-[0.3em] text-white/40">
+														<h2 className="line-clamp-2 text-base font-semibold text-white">{name}</h2>
+														<p className="text-[10px] uppercase tracking-[0.25em] text-white/40">
 															{formatDate(title.release_date ?? title.first_air_date)}
 														</p>
 													</div>
-													<div className="flex flex-wrap items-center gap-2">
+													<div className="flex flex-wrap items-center gap-1.5">
 														<span className="app-search-chip app-search-rating inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white">
 															<Star className="h-3 w-3" />
 															{title.vote_average?.toFixed(1) ?? "-"}
@@ -591,7 +618,7 @@ export default function SearchPage() {
 													</div>
 												</div>
 
-												<p className="app-search-overview text-xs text-white/70 sm:text-sm">
+												<p className="app-search-overview line-clamp-3 text-xs text-white/70">
 													{title.overview || "Sem descrição cadastrada."}
 												</p>
 
@@ -607,7 +634,7 @@ export default function SearchPage() {
 													))}
 												</div>
 
-												<div className="flex flex-wrap items-center gap-3">
+												<div className="flex flex-wrap items-center gap-2">
 													{trailer ? (
 														<a
 															className="app-search-action-primary inline-flex items-center gap-2 rounded-full bg-rose-600 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-rose-500"
@@ -838,6 +865,7 @@ export default function SearchPage() {
 								</motion.article>
 							);
 						})}
+						</div>
 						{query && totalPages > 1 && (
 							<div className="flex flex-wrap items-center justify-center gap-2 pt-2">
 								<button

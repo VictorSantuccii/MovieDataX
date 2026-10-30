@@ -346,15 +346,22 @@ export const discoverTitles = (
     genreId?: number;
     minRating?: number;
     minYear?: number;
+    maxYear?: number;
+    sortBy?: string;
+    minVotes?: number;
     page?: number;
   },
 ) => {
   const query: Record<string, string | number | boolean | undefined> = {
     language: params.language ?? "pt-BR",
-    sort_by: "popularity.desc",
+    sort_by:
+      mediaType === "tv" && params.sortBy?.startsWith("primary_release_date")
+        ? params.sortBy.replace("primary_release_date", "first_air_date")
+        : params.sortBy ?? "popularity.desc",
     include_adult: false,
     "vote_average.gte": params.minRating,
     page: params.page ?? 1,
+    "vote_count.gte": params.minVotes,
   };
 
   if (params.genreId) {
@@ -366,6 +373,14 @@ export const discoverTitles = (
       query["primary_release_date.gte"] = `${params.minYear}-01-01`;
     } else {
       query["first_air_date.gte"] = `${params.minYear}-01-01`;
+    }
+
+    if (params.maxYear) {
+      if (mediaType === "movie") {
+        query["primary_release_date.lte"] = `${params.maxYear}-12-31`;
+      } else {
+        query["first_air_date.lte"] = `${params.maxYear}-12-31`;
+      }
     }
   }
 

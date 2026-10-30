@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, Award, Calendar, Clapperboard, Star, TrendingUp, Users } from "lucide-react";
+import { Award, Calendar, Clapperboard, Star, TrendingUp, Users } from "lucide-react";
 
 type AwardItem = {
 	id: number;
@@ -47,7 +46,6 @@ type AwardsResponse = {
 const imageBase = "https://image.tmdb.org/t/p";
 
 export default function AwardsPage() {
-	const router = useRouter();
 	const [items, setItems] = useState<AwardItem[]>([]);
 	const [sections, setSections] = useState<AwardSection[]>([]);
 	const [yearDistribution, setYearDistribution] = useState<YearDistributionItem[]>([]);
@@ -96,30 +94,24 @@ export default function AwardsPage() {
 
 	return (
 		<main className="app-awards-page min-h-screen text-white">
-			<section className="relative overflow-hidden px-6 pb-10 pt-16 sm:px-10 lg:px-16">
+			<section className="relative overflow-hidden px-6 pb-8 pt-8 sm:px-10 lg:px-16">
 				<div className="app-awards-hero-bg absolute inset-0" />
 				<div className="app-awards-hero-glow absolute inset-x-0 top-20 h-40 blur-3xl" />
 
-				<div className="relative mx-auto max-w-6xl">
-					<div className="flex flex-wrap items-center gap-3">
-						<button
-							type="button"
-							onClick={() => router.push("/")}
-							className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/70 transition hover:text-white"
-						>
-							<ArrowLeft className="h-4 w-4" />
-							Voltar
-						</button>
-						<span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase text-rose-200">
+				<div className="relative mx-auto max-w-7xl text-center">
+					<div className="mb-3 flex items-center justify-center gap-3">
+						<span className="h-px w-10 bg-rose-400/70 sm:w-16" />
+						<span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-rose-200/80">
 							<Award className="h-4 w-4" />
 							Premiações
 						</span>
+						<span className="h-px w-10 bg-rose-400/70 sm:w-16" />
 					</div>
-					<h1 className="mt-6 text-3xl font-semibold text-white sm:text-4xl">Premiações em dados da API</h1>
-					<p className="mt-2 text-sm text-white/60">
-						Resultados separados por premiação (Oscar, Globo de Ouro, BAFTA, Palma de Ouro e Emmy), com anos e métricas.
+					<h1 className="text-4xl font-semibold leading-tight tracking-tight text-white sm:text-6xl">Premiações</h1>
+					<p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-white/55 sm:text-base">
+						Explore títulos reconhecidos, principais eventos e anos marcantes do cinema e da televisão.
 					</p>
-					<div className="mt-5 flex flex-wrap gap-2">
+					<div className="mt-5 flex flex-wrap justify-center gap-2">
 						<span className="app-awards-pill inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold">
 							<Clapperboard className="h-4 w-4 text-rose-200" />
 							{totalResults} títulos
@@ -137,13 +129,13 @@ export default function AwardsPage() {
 			</section>
 
 			<section className="px-6 pb-20 sm:px-10 lg:px-16">
-				<div className="mx-auto max-w-6xl">
+				<div className="mx-auto max-w-7xl">
 					{loading ? (
 						<div className="app-awards-panel rounded-2xl border p-6 text-sm">Carregando premiações...</div>
 					) : (
 						<div className="space-y-10">
 							{yearDistribution.length > 0 && (
-								<div className="app-awards-panel rounded-3xl border p-5">
+								<div className="app-awards-panel rounded-[2rem] border p-5 shadow-2xl">
 									<p className="text-xs font-semibold uppercase tracking-[0.3em] text-rose-200">Anos disponíveis</p>
 									<div className="mt-4 flex flex-wrap gap-2">
 										{yearDistribution.slice(0, 18).map((yearItem) => (
@@ -178,7 +170,7 @@ export default function AwardsPage() {
 										</div>
 									</div>
 
-									<div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:grid sm:snap-none sm:overflow-visible sm:pb-0 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
+									<div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
 										{section.results.map((entry) => {
 											const poster = entry.poster_path ? `${imageBase}/w500${entry.poster_path}` : "/placeholders/title-fallback.svg";
 											const year = entry.release_date?.slice(0, 4) ?? entry.first_air_date?.slice(0, 4) ?? "-";
@@ -188,19 +180,18 @@ export default function AwardsPage() {
 												<Link
 													key={`${section.award}-${entry.media_type}-${entry.id}`}
 													href={href}
-													className="app-awards-card block w-72 shrink-0 snap-start rounded-3xl border p-5 transition hover:-translate-y-1 sm:w-auto"
+													className="app-awards-card group block overflow-hidden rounded-2xl border p-3 transition hover:-translate-y-1"
 												>
-													<div className="flex gap-4">
-														<div className="app-awards-poster relative h-32 w-24 overflow-hidden rounded-2xl">
-															<Image alt={entry.title} src={poster} fill sizes="96px" className="object-cover" />
+													<div className="app-awards-poster relative aspect-[2/3] overflow-hidden rounded-xl">
+															<Image alt={entry.title} src={poster} fill sizes="(min-width: 1280px) 20vw, 25vw" className="object-cover transition duration-500 group-hover:scale-105" />
 														</div>
-														<div className="flex-1">
-															<p className="text-base font-semibold text-white">{entry.title}</p>
-															<p className="mt-1 inline-flex items-center gap-1 text-xs uppercase tracking-[0.2em] text-white/60">
+														<div className="space-y-2 p-1 pt-3">
+															<p className="line-clamp-2 text-sm font-semibold text-white">{entry.title}</p>
+															<p className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.2em] text-white/60">
 																<Calendar className="h-3 w-3" />
 																{year}
 															</p>
-															<div className="mt-2 flex flex-wrap gap-2 text-xs">
+															<div className="flex flex-wrap gap-1.5 text-[10px]">
 																<span className="app-awards-pill inline-flex items-center gap-1 rounded-full px-2 py-1 font-semibold">
 																	<Star className="h-3 w-3" />
 																	{entry.vote_average?.toFixed(1) ?? "-"}
@@ -215,7 +206,6 @@ export default function AwardsPage() {
 																</span>
 															</div>
 														</div>
-													</div>
 													<p className="mt-3 line-clamp-3 text-sm text-white/70">{entry.overview || "Sem descrição."}</p>
 													<div className="mt-3 flex flex-wrap gap-2">
 														{entry.source_awards.map((award) => (

@@ -21,6 +21,8 @@ import {
 	Star,
 	TrendingUp,
 	Users,
+	Volume2,
+	VolumeX,
 	X,
 } from "lucide-react";
 
@@ -39,6 +41,7 @@ type TmdbListItem = {
 	media_type?: "movie" | "tv";
 	title?: string;
 	name?: string;
+	overview?: string;
 	vote_average?: number;
 	release_date?: string;
 	first_air_date?: string;
@@ -105,6 +108,7 @@ type TrendingDetails = {
 	popularity?: number;
 	homepage?: string;
 	genres?: Array<{ id: number; name: string }>;
+	videos?: Array<{ key: string; name: string }>;
 };
 
 type HomeFeedResponse = {
@@ -235,16 +239,20 @@ export default function Home() {
 	const [publicFavorites, setPublicFavorites] = useState<TmdbListItem[]>(fallbackTitles);
 	const [kidsNow, setKidsNow] = useState<TmdbListItem[]>(fallbackTitles);
 	const [topRated, setTopRated] = useState<TmdbListItem[]>(fallbackTitles);
-	const [directors, setDirectors] = useState<DirectorSpot[]>(fallbackDirectors);
-	const [popularPeople, setPopularPeople] = useState<PopularPersonSpot[]>(fallbackPeople);
-	const [awards, setAwards] = useState<AwardSpot[]>(fallbackAwards);
-	const [apiSourcesCount, setApiSourcesCount] = useState(6);
+	const [, setDirectors] = useState<DirectorSpot[]>(fallbackDirectors);
+	const [, setPopularPeople] = useState<PopularPersonSpot[]>(fallbackPeople);
+	const [, setAwards] = useState<AwardSpot[]>(fallbackAwards);
 	const [isTrendingModalOpen, setIsTrendingModalOpen] = useState(false);
 	const [selectedTrendingId, setSelectedTrendingId] = useState<number | null>(null);
 	const [trendingDetails, setTrendingDetails] = useState<TrendingDetails | null>(null);
 	const [trendingDetailsLoading, setTrendingDetailsLoading] = useState(false);
 	const [trendingDetailsError, setTrendingDetailsError] = useState<string | null>(null);
 	const [heroIndex, setHeroIndex] = useState(0);
+	const [isHeroPlaying, setIsHeroPlaying] = useState(false);
+	const [isHeroMuted, setIsHeroMuted] = useState(true);
+	const [heroTrailerKey, setHeroTrailerKey] = useState<string | null>(null);
+	const heroTrailerCache = useRef<Record<string, string | null>>({});
+	const heroHoverRef = useRef(false);
 
 	const handleSearch = () => {
 		const trimmed = query.trim();
@@ -404,11 +412,6 @@ export default function Home() {
 					setAwards(nextAwards);
 				}
 
-				const sourcesFromFeed = nextHomeFeed.meta?.sources;
-				if (typeof sourcesFromFeed === "number" && Number.isFinite(sourcesFromFeed)) {
-					setApiSourcesCount(Math.max(6, sourcesFromFeed));
-				}
-
 				if (!nextTopSearches.length && !nextMostViewed.length && !nextTopRated.length) {
 					setTopSearches(fallbackTitles);
 					setMostViewed(fallbackTitles);
@@ -486,7 +489,7 @@ export default function Home() {
 	}, [topSearches, popularNow, mostViewed]);
 
 	useEffect(() => {
-		if (heroItems.length <= 1) {
+		if (heroItems.length <= 1 || isHeroPlaying) {
 			return;
 		}
 
@@ -495,7 +498,7 @@ export default function Home() {
 		}, 4500);
 
 		return () => clearInterval(timer);
-	}, [heroItems.length]);
+	}, [heroItems.length, isHeroPlaying]);
 
 	useEffect(() => {
 		if (!heroItems.length) {
@@ -536,6 +539,44 @@ export default function Home() {
 		setTrendingDetailsLoading(false);
 	};
 
+	const loadHeroTrailer = async (): Promise<string | null> => {
+		const cacheKey = `${currentHeroType}-${currentHero.id}`;
+		if (cacheKey in heroTrailerCache.current) {
+			const cachedKey = heroTrailerCache.current[cacheKey] ?? null;
+			setHeroTrailerKey(cachedKey);
+			return cachedKey;
+		}
+
+		try {
+			const response = await fetch(`/api/imdb/title-details?media_type=${currentHeroType}&id=${currentHero.id}`);
+			if (!response.ok) {
+				throw new Error("Trailer unavailable");
+			}
+			const data = (await response.json()) as TrendingDetails;
+			const trailerKey = data.videos?.[0]?.key ?? null;
+			heroTrailerCache.current[cacheKey] = trailerKey;
+			setHeroTrailerKey(trailerKey);
+			return trailerKey;
+		} catch {
+			heroTrailerCache.current[cacheKey] = null;
+			setHeroTrailerKey(null);
+			return null;
+		}
+	};
+
+	const startHeroTrailer = async (force = false) => {
+		const trailerKey = await loadHeroTrailer();
+		if (trailerKey && (force || heroHoverRef.current)) {
+			setIsHeroPlaying(true);
+		}
+	};
+
+	const stopHeroTrailer = () => {
+		setIsHeroPlaying(false);
+		setHeroTrailerKey(null);
+		setIsHeroMuted(true);
+	};
+
 	const currentHero = heroItems[heroIndex] ?? topSearches[0] ?? fallbackTitles[0];
 	const currentHeroType = getTitleType(currentHero);
 	const currentHeroName = getTitleName(currentHero);
@@ -555,6 +596,21 @@ export default function Home() {
 			.filter((label): label is string => Boolean(label))
 			.slice(0, 3);
 
+	const dailyTop10 = useMemo(() => {
+		const seen = new Set<string>();
+		return [...popularNow, ...topSearches, ...mostViewed]
+			.filter((entry) => {
+				const key = `${resolveMediaType(entry)}-${entry.id}`;
+				if (seen.has(key)) {
+					return false;
+				}
+				seen.add(key);
+				return true;
+			})
+			.sort((a, b) => (b.popularity ?? b.vote_average ?? 0) - (a.popularity ?? a.vote_average ?? 0))
+			.slice(0, 10);
+	}, [mostViewed, popularNow, topSearches]);
+
 	const shiftHero = (direction: "prev" | "next") => {
 		if (!heroItems.length) {
 			return;
@@ -565,6 +621,7 @@ export default function Home() {
 			}
 			return (current - 1 + heroItems.length) % heroItems.length;
 		});
+		stopHeroTrailer();
 	};
 
 	return (
@@ -573,82 +630,118 @@ export default function Home() {
 				<div className="app-home-bg absolute inset-0" />
 				<div className="app-home-glow absolute inset-x-0 top-16 h-40 blur-3xl" />
 
-				<section className="relative px-4 pb-10 pt-20 sm:px-8 lg:px-12">
-					<motion.div className="mx-auto flex w-full max-w-315 flex-col gap-6" variants={container} initial={false} animate="show">
-						<motion.div variants={item} className="px-2">
-							<div className="app-brand-shell relative mx-auto max-w-5xl px-4 py-6 text-center sm:px-8 sm:py-8">
-								<span className="app-brand-kicker inline-flex items-center rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-rose-100/90 sm:text-[11px]">
-									Plataforma de cinema
-								</span>
-								<h2 className="app-brand-title mt-3 text-5xl font-black tracking-tight text-transparent bg-clip-text bg-linear-to-r from-rose-200 via-white to-sky-200 sm:text-6xl lg:text-7xl">
-									MovieDataX
-								</h2>
-								<p className="app-brand-subtitle mx-auto mt-3 max-w-3xl text-base text-white/78 sm:text-lg lg:text-xl">
-									Seu hub inteligente para explorar filmes e o que realmente importa no cinema.
-								</p>
-							</div>
-						</motion.div>
-
-						<motion.div variants={item} className="overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl shadow-black/50">
-							<div className="relative">
-								<div className="relative h-48 sm:h-64 lg:h-82">
+				<section className="relative px-4 pb-10 pt-5 sm:px-8 sm:pt-8 lg:px-12">
+					<motion.div className="mx-auto flex w-full max-w-340 flex-col gap-6" variants={container} initial={false} animate="show">
+						<motion.div
+							variants={item}
+							className="app-home-hero group relative overflow-hidden rounded-[2rem] border border-white/10 bg-black shadow-2xl shadow-black/60"
+							onMouseEnter={() => {
+								heroHoverRef.current = true;
+								void startHeroTrailer();
+							}}
+							onMouseLeave={() => {
+								heroHoverRef.current = false;
+								stopHeroTrailer();
+							}}
+						>
+							<div className="relative h-[34rem] sm:h-[40rem] lg:h-[47rem]">
 									<Image
 										alt={currentHeroName}
 										src={currentHeroBackdrop}
 										fill
 										sizes="100vw"
-										className="object-cover"
+										className={`object-cover transition duration-700 ${isHeroPlaying && heroTrailerKey ? "scale-105 opacity-25" : "scale-100 opacity-100"}`}
 									/>
-									<div className="absolute inset-0 bg-linear-to-r from-black/70 via-black/40 to-black/20" />
-									<div className="app-hero-overlay absolute inset-x-0 bottom-0 h-24 bg-linear-to-t from-black/70 to-transparent" />
+									{isHeroPlaying && heroTrailerKey ? (
+										<iframe
+											title={`Trailer de ${currentHeroName}`}
+											src={`https://www.youtube-nocookie.com/embed/${heroTrailerKey}?autoplay=1&mute=${isHeroMuted ? 1 : 0}&controls=1&loop=1&playlist=${heroTrailerKey}&rel=0`}
+											className="absolute inset-0 h-full w-full scale-105 opacity-95"
+											allow="autoplay; encrypted-media"
+										/>
+									) : null}
+									{!isHeroPlaying && (
+										<button
+											type="button"
+											onClick={() => void startHeroTrailer(true)}
+											className="group/play absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-black/35 p-5 text-white opacity-25 shadow-2xl transition hover:scale-105 hover:border-rose-300/70 hover:bg-rose-600/80 hover:opacity-100 focus-visible:opacity-100"
+											aria-label={`Reproduzir trailer de ${currentHeroName}`}
+										>
+											<Play className="h-7 w-7 fill-current" />
+										</button>
+									)}
+									<div className="app-home-hero-side-overlay absolute inset-0 bg-linear-to-r from-black/75 via-black/25 to-transparent" />
+									<div className="app-home-hero-top-overlay absolute inset-0 bg-linear-to-t from-[#0b0b0f] via-transparent to-black/15" />
+									<div className="app-home-hero-bottom-overlay absolute inset-x-0 bottom-0 h-2/3 bg-linear-to-t from-[#0b0b0f] via-[#0b0b0f]/70 to-transparent" />
+									<div className="absolute inset-x-0 top-5 z-10 flex justify-center sm:top-8">
+										<h1 className="text-xl font-black tracking-tight text-transparent bg-clip-text bg-linear-to-r from-rose-200 via-white to-sky-200 drop-shadow-lg sm:text-2xl">
+											MovieDataX
+										</h1>
+									</div>
 								</div>
 
-								<button type="button" onClick={() => shiftHero("prev")} className="absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/20 bg-black/45 p-2 text-white/90 transition hover:text-white" aria-label="Anterior">
+								<button type="button" onClick={() => shiftHero("prev")} className="absolute left-3 top-1/2 z-20 flex -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/45 p-2 text-white/90 transition hover:border-rose-300/70 hover:bg-rose-600/80 hover:text-white" aria-label="Anterior">
 									<ChevronLeft className="h-5 w-5" />
 								</button>
-								<button type="button" onClick={() => shiftHero("next")} className="absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/20 bg-black/45 p-2 text-white/90 transition hover:text-white" aria-label="Próximo">
+								<button type="button" onClick={() => shiftHero("next")} className="absolute right-3 top-1/2 z-20 flex -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/45 p-2 text-white/90 transition hover:border-rose-300/70 hover:bg-rose-600/80 hover:text-white" aria-label="Próximo">
 									<ChevronRight className="h-5 w-5" />
 								</button>
 
-								<div className="absolute inset-x-0 bottom-0 p-4 sm:p-6 lg:p-8">
-									<p className="app-hero-subtitle text-xs uppercase tracking-[0.32em] text-white/70">Destaque da semana</p>
-									<h1 className="app-hero-title mt-2 max-w-2xl text-2xl font-semibold text-white sm:text-3xl lg:text-5xl">{currentHeroName}</h1>
-									<div className="mt-3 flex flex-wrap items-center gap-2 text-xs sm:text-sm">
-										<span className="app-hero-chip rounded-full bg-white/15 px-3 py-1 font-medium">{currentHeroYear}</span>
-										<span className="app-hero-chip rounded-full bg-white/15 px-3 py-1 font-medium">{currentHeroType === "movie" ? "Filme" : "Série"}</span>
-										<span className="app-hero-chip app-rating-chip rounded-full bg-white/15 px-3 py-1 font-medium"><Star className="h-3.5 w-3.5" /> {currentHero.vote_average?.toFixed(1) ?? "-"}</span>
+								{isHeroPlaying && heroTrailerKey ? (
+									<button
+										type="button"
+										onClick={() => setIsHeroMuted((muted) => !muted)}
+										className="absolute bottom-5 right-5 z-20 flex items-center gap-2 rounded-full border border-white/25 bg-black/60 px-3 py-2 text-xs font-semibold text-white transition hover:border-rose-300/70 hover:bg-rose-600/80"
+										aria-label={isHeroMuted ? "Ativar som do trailer" : "Desativar som do trailer"}
+										aria-pressed={!isHeroMuted}
+									>
+										{isHeroMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+										{isHeroMuted ? "Ativar som" : "Silenciar"}
+									</button>
+								) : null}
+
+								<div className={`absolute inset-x-0 bottom-24 z-10 px-4 sm:bottom-28 sm:px-8 lg:bottom-32 lg:px-12 ${isHeroPlaying ? "hidden" : ""}`}>
+									<p className="app-hero-subtitle text-[10px] uppercase tracking-[0.28em] text-white/70">Destaque da semana</p>
+									<h1 className="app-hero-title mt-1 max-w-3xl text-xl font-semibold text-white sm:text-3xl lg:text-4xl">{currentHeroName}</h1>
+									{currentHero.overview ? (
+										<p className="app-hero-overview mt-1.5 line-clamp-2 max-w-lg text-[11px] leading-relaxed text-white/70 sm:text-xs">
+											{currentHero.overview}
+										</p>
+									) : null}
+									<div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] sm:text-xs">
+										<span className="app-hero-chip rounded-full bg-white/15 px-2.5 py-0.5 font-medium">{currentHeroYear}</span>
+										<span className="app-hero-chip rounded-full bg-white/15 px-2.5 py-0.5 font-medium">{currentHeroType === "movie" ? "Filme" : "Série"}</span>
+										<span className="app-hero-chip app-rating-chip rounded-full bg-white/15 px-2.5 py-0.5 font-medium"><Star className="h-3 w-3" /> {currentHero.vote_average?.toFixed(1) ?? "-"}</span>
 										{currentHeroGenres.map((genre) => (
-											<span key={genre} className="app-hero-chip rounded-full bg-white/15 px-3 py-1 font-medium">{genre}</span>
+											<span key={genre} className="app-hero-chip rounded-full bg-white/15 px-2.5 py-0.5 font-medium">{genre}</span>
 										))}
 									</div>
-									<div className="mt-4 flex flex-wrap items-center gap-2">
+									<div className="mt-2.5 flex flex-wrap items-center gap-1.5">
 										<button
 											type="button"
-											onClick={() => void openTrendingModal(currentHero.id)}
-											className="app-hero-cta-primary inline-flex items-center gap-2 rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-500"
+											onClick={() => void startHeroTrailer(true)}
+											className="app-hero-cta-primary inline-flex items-center gap-2 rounded-full bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-500"
 										>
-											<Play className="h-4 w-4" /> Assistir trailer
+											<Play className="h-3.5 w-3.5" /> Assistir trailer
 										</button>
-										<Link href={getTitleHref(currentHero)} className="app-hero-cta-secondary inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/30 px-4 py-2 text-sm font-semibold text-white/90 transition hover:text-white">
-											<ArrowUpRight className="h-4 w-4" /> Ver detalhes
+										<Link href={getTitleHref(currentHero)} className="app-hero-cta-secondary inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/30 px-3 py-1.5 text-xs font-semibold text-white/90 transition hover:text-white">
+											<ArrowUpRight className="h-3.5 w-3.5" /> Ver detalhes
 										</Link>
 									</div>
 								</div>
-							</div>
 						</motion.div>
 
-						<motion.div variants={item} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-							<form className="col-span-full flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3" onSubmit={(event) => { event.preventDefault(); handleSearch(); }}>
+						<motion.div variants={item} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+							<form className="app-search-form col-span-full flex items-center gap-3 rounded-2xl border px-4 py-3" onSubmit={(event) => { event.preventDefault(); handleSearch(); }}>
 								<Search className="h-5 w-5 text-rose-200" />
-								<input className="w-full bg-transparent text-white/85 placeholder:text-white/40 focus:outline-none" placeholder="Buscar por filmes ou diretores" value={query} onChange={(event) => setQuery(event.target.value)} />
+								<input className="app-search-input w-full bg-transparent text-white/85 placeholder:text-white/40 focus:outline-none" placeholder="Buscar por filmes ou diretores" value={query} onChange={(event) => setQuery(event.target.value)} />
 							</form>
-							<Link href="/titles" className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white/90 transition hover:border-rose-300/60"><Clapperboard className="h-4 w-4" />Catálogo</Link>
-							<Link href="/awards" className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white/90 transition hover:border-rose-300/60"><Award className="h-4 w-4" />Premiações</Link>
-							<Link href="/people" className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white/90 transition hover:border-rose-300/60"><Users className="h-4 w-4" />Pessoas</Link>
-							<div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white/90">{apiSourcesCount}+ fontes de API</div>
+							<Link href="/titles" className="group inline-flex items-center justify-between rounded-2xl border border-white/10 bg-linear-to-r from-rose-500/20 to-white/5 px-4 py-3 text-sm font-semibold text-white/90 transition hover:-translate-y-0.5 hover:border-rose-300/60"><span className="inline-flex items-center gap-2"><Clapperboard className="h-4 w-4 text-rose-200" />Catálogo completo</span><ArrowUpRight className="h-4 w-4 text-white/40 transition group-hover:text-white" /></Link>
+							<Link href="/awards" className="group inline-flex items-center justify-between rounded-2xl border border-white/10 bg-linear-to-r from-amber-500/15 to-white/5 px-4 py-3 text-sm font-semibold text-white/90 transition hover:-translate-y-0.5 hover:border-amber-300/60"><span className="inline-flex items-center gap-2"><Award className="h-4 w-4 text-amber-200" />Premiações</span><ArrowUpRight className="h-4 w-4 text-white/40 transition group-hover:text-white" /></Link>
+							<Link href="/people" className="group inline-flex items-center justify-between rounded-2xl border border-white/10 bg-linear-to-r from-sky-500/15 to-white/5 px-4 py-3 text-sm font-semibold text-white/90 transition hover:-translate-y-0.5 hover:border-sky-300/60"><span className="inline-flex items-center gap-2"><Users className="h-4 w-4 text-sky-200" />Atores e diretores</span><ArrowUpRight className="h-4 w-4 text-white/40 transition group-hover:text-white" /></Link>
 						</motion.div>
 
-						<motion.div variants={item} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+						<motion.div variants={item} className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
 							<div className="space-y-6">
 								<div>
 									<div className="mb-3 flex items-center justify-between">
@@ -662,7 +755,7 @@ export default function Home() {
 										</div>
 									</div>
 									<div ref={setRowRef("row-top")} className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
-										{topSearches.slice(0, 8).map((entry) => {
+										{topSearches.slice(0, 12).map((entry, index) => {
 											const name = getTitleName(entry);
 											const type = getTitleType(entry);
 											const firstGenre = (entry.genre_ids ?? [])
@@ -673,10 +766,9 @@ export default function Home() {
 												.find((label): label is string => Boolean(label));
 											const poster = entry.poster_path ? `${imageBase}/w500${entry.poster_path}` : "/placeholders/title-fallback.svg";
 											return (
-												<Link key={`top-${entry.id}`} href={getTitleHref(entry)} className="group block w-38 shrink-0 snap-start overflow-hidden rounded-2xl border border-white/10 bg-white/5 transition hover:-translate-y-1 hover:border-rose-300/50 sm:w-42">
-													<div className="relative aspect-2/3"><Image alt={name} src={poster} fill sizes="180px" className="object-cover" /><div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/25 to-transparent" /></div>
-													<div className="absolute" />
-													<div className="-mt-16 p-3">
+												<Link key={`top-${entry.id}`} href={getTitleHref(entry)} className={`group relative block shrink-0 snap-start overflow-hidden rounded-3xl border border-white/10 bg-white/5 transition hover:-translate-y-1 hover:border-rose-300/50 ${index === 0 ? "w-64 sm:w-80" : "w-38 sm:w-42"}`}>
+													<div className={`relative ${index === 0 ? "aspect-video" : "aspect-2/3"}`}><Image alt={name} src={poster} fill sizes={index === 0 ? "320px" : "180px"} className="object-cover transition duration-500 group-hover:scale-105" /><div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/25 to-transparent" />{index === 0 ? <span className="absolute left-3 top-3 rounded-full bg-rose-600/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white">Sua próxima escolha</span> : null}</div>
+													<div className="absolute inset-x-0 bottom-0 z-10 p-3">
 														<p className="app-poster-title line-clamp-2 text-sm font-semibold text-white">{name}</p>
 														<div className="mt-1.5 flex flex-wrap items-center gap-1.5">
 															<span className="app-main-poster-chip rounded-full px-2 py-0.5 text-[11px] font-semibold">{getTitleYear(entry)}</span>
@@ -702,7 +794,7 @@ export default function Home() {
 										</div>
 									</div>
 									<div ref={setRowRef("row-pop")} className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
-										{popularNow.slice(0, 8).map((entry) => {
+										{popularNow.slice(0, 12).map((entry) => {
 											const name = getTitleName(entry);
 											const type = getTitleType(entry);
 											const firstGenre = (entry.genre_ids ?? [])
@@ -732,6 +824,58 @@ export default function Home() {
 									</div>
 								</div>
 
+								<div className="rounded-3xl border border-white/10 bg-linear-to-br from-rose-500/10 via-white/5 to-sky-500/10 p-4 sm:p-5">
+									<div className="mb-4 flex items-center justify-between">
+										<div>
+											<h3 className="inline-flex items-center gap-2 text-xl font-semibold text-white"><Sparkles className="h-5 w-5 text-rose-200" />Descobertas para hoje</h3>
+											<p className="mt-1 text-sm text-white/55">Sugestões para sair do óbvio.</p>
+										</div>
+										<Link href="/titles" className="text-sm text-white/70 hover:text-white">Explorar</Link>
+									</div>
+									<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+										{discoverNow.slice(0, 9).map((entry) => {
+											const name = getTitleName(entry);
+											const poster = entry.poster_path ? `${imageBase}/w500${entry.poster_path}` : "/placeholders/title-fallback.svg";
+											return (
+												<Link key={`discover-${entry.id}`} href={getTitleHref(entry)} className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 p-2.5 transition hover:-translate-y-0.5 hover:border-rose-300/50">
+													<div className="relative h-20 w-14 shrink-0 overflow-hidden rounded-xl"><Image alt={name} src={poster} fill sizes="56px" className="object-cover transition duration-300 group-hover:scale-105" /></div>
+													<div className="min-w-0">
+														<p className="line-clamp-2 text-sm font-semibold text-white">{name}</p>
+														<p className="mt-1 text-xs text-white/55">{getTitleYear(entry)} · {getTitleType(entry) === "movie" ? "Filme" : "Série"}</p>
+														<p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-amber-200"><Star className="h-3 w-3" />{entry.vote_average?.toFixed(1) ?? "-"}</p>
+													</div>
+												</Link>
+											);
+										})}
+									</div>
+								</div>
+
+								<div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+									<div className="mb-4 flex items-center justify-between">
+										<div>
+											<h3 className="inline-flex items-center gap-2 text-xl font-semibold text-white"><Star className="h-5 w-5 text-amber-300" />Escolhas para sua próxima sessão</h3>
+											<p className="mt-1 text-sm text-white/55">Títulos bem avaliados para assistir sem perder tempo.</p>
+										</div>
+										<Link href="/titles?sortBy=vote_average.desc&page=1" className="text-sm text-white/70 hover:text-white">Ver catálogo</Link>
+									</div>
+									<div className="grid gap-3 sm:grid-cols-2">
+										{topRated.slice(0, 4).map((entry, index) => {
+											const name = getTitleName(entry);
+											const poster = entry.poster_path ? `${imageBase}/w500${entry.poster_path}` : "/placeholders/title-fallback.svg";
+											return (
+												<Link key={`quick-pick-${entry.id}`} href={getTitleHref(entry)} className="group relative flex min-h-28 items-end overflow-hidden rounded-2xl border border-white/10 bg-black/30 p-3 transition hover:-translate-y-0.5 hover:border-amber-300/50">
+													<Image alt={name} src={poster} fill sizes="320px" className="object-cover opacity-55 transition duration-500 group-hover:scale-105 group-hover:opacity-70" />
+													<div className="absolute inset-0 bg-linear-to-t from-black/95 via-black/45 to-transparent" />
+													<div className="relative z-10 flex w-full items-end gap-3">
+														<span className="app-quick-pick-rank text-2xl font-black text-white/35">{String(index + 1).padStart(2, "0")}</span>
+														<div className="min-w-0"><p className="app-quick-pick-title line-clamp-1 text-sm font-semibold text-white">{name}</p><p className="mt-1 inline-flex items-center gap-1 text-xs text-amber-200"><Star className="h-3 w-3" />{entry.vote_average?.toFixed(1) ?? "-"}</p></div>
+													</div>
+												</Link>
+											);
+										})}
+									</div>
+								</div>
+
 								<div>
 									<div className="mb-3 flex items-center justify-between">
 										<h3 className="inline-flex items-center gap-2 text-xl font-semibold text-white"><Star className="h-5 w-5 text-amber-300" />Favoritos do público</h3>
@@ -741,7 +885,7 @@ export default function Home() {
 										</div>
 									</div>
 									<div ref={setRowRef("row-favorites")} className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
-										{publicFavorites.slice(0, 8).map((entry) => {
+										{publicFavorites.slice(0, 12).map((entry) => {
 											const name = getTitleName(entry);
 											const type = getTitleType(entry);
 											const firstGenre = (entry.genre_ids ?? [])
@@ -778,7 +922,7 @@ export default function Home() {
 										</div>
 									</div>
 									<div ref={setRowRef("row-kids")} className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
-										{kidsNow.slice(0, 8).map((entry) => {
+										{kidsNow.slice(0, 12).map((entry) => {
 											const name = getTitleName(entry);
 											const type = getTitleType(entry);
 											const firstGenre = (entry.genre_ids ?? [])
@@ -806,100 +950,203 @@ export default function Home() {
 									</div>
 								</div>
 
-								<div>
-									<div className="mb-3 flex items-center justify-between">
-										<h3 className="text-xl font-semibold text-white">Mais vistos</h3>
-										<Link href="/titles" className="text-sm text-white/70 hover:text-white">Ver todos</Link>
+								<div className="rounded-3xl border border-white/10 bg-white/[0.035] p-4 sm:p-5">
+									<div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+										<div>
+											<p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-rose-200">O que está chamando atenção</p>
+											<h3 className="mt-1 text-2xl font-semibold text-white">Mais vistos</h3>
+											<p className="mt-1 text-sm text-white/50">Os títulos que estão movimentando a comunidade.</p>
+										</div>
+										<Link href="/titles" className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/75 transition hover:border-rose-300/50 hover:text-white">Ver catálogo <ArrowUpRight className="h-3.5 w-3.5" /></Link>
 									</div>
 									<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-										{mostViewed.slice(0, 6).map((entry) => {
+										{mostViewed.slice(0, 9).map((entry, index) => {
 											const name = getTitleName(entry);
 											const poster = entry.poster_path ? `${imageBase}/w500${entry.poster_path}` : "/placeholders/title-fallback.svg";
 											return (
-												<Link key={`viewed-${entry.id}`} href={getTitleHref(entry)} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 transition hover:border-rose-300/50">
-													<div className="relative h-20 w-14 overflow-hidden rounded-xl"><Image alt={name} src={poster} fill sizes="56px" className="object-cover" /></div>
-													<div className="min-w-0 flex-1"><p className="line-clamp-2 text-sm font-semibold text-white">{name}</p><p className="mt-1 text-xs text-white/70">{getTitleYear(entry)} • {getTitleType(entry) === "movie" ? "Filme" : "Série"}</p></div>
+												<Link key={`viewed-${entry.id}`} href={getTitleHref(entry)} className={`group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-white/10 p-3 transition hover:-translate-y-0.5 hover:border-rose-300/50 ${index === 0 ? "bg-linear-to-r from-rose-500/20 to-white/[0.04]" : "bg-white/[0.04]"}`}>
+													<span className="w-6 shrink-0 text-center text-lg font-black text-white/25">{String(index + 1).padStart(2, "0")}</span>
+													<div className="relative h-20 w-14 shrink-0 overflow-hidden rounded-xl"><Image alt={name} src={poster} fill sizes="56px" className="object-cover transition duration-500 group-hover:scale-105" /></div>
+													<div className="min-w-0 flex-1"><p className="line-clamp-2 text-sm font-semibold text-white">{name}</p><p className="mt-1 text-xs text-white/55">{getTitleYear(entry)} · {getTitleType(entry) === "movie" ? "Filme" : "Série"}</p><p className="mt-1 inline-flex items-center gap-1 text-xs text-amber-200"><Star className="h-3 w-3" />{entry.vote_average?.toFixed(1) ?? "-"}</p></div>
 												</Link>
 											);
+										})}
+									</div>
+								</div>
+
+								<div className="app-home-film-panel rounded-3xl border border-white/10 bg-white/[0.035] p-4 sm:p-5">
+									<div className="mb-4 flex items-end justify-between gap-3">
+										<div>
+											<p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-sky-200">Maratona em alta</p>
+											<h3 className="mt-1 text-2xl font-semibold text-white">Séries para acompanhar</h3>
+											<p className="mt-1 text-sm text-white/50">Histórias que estão dominando as conversas.</p>
+										</div>
+										<Link href="/titles?type=tv&page=1" className="text-xs font-semibold text-white/65 transition hover:text-white">Ver séries</Link>
+									</div>
+									<div className="grid gap-3 sm:grid-cols-2">
+										{[...topSearches, ...popularNow].filter((entry) => getTitleType(entry) === "tv").slice(0, 6).map((entry, index) => {
+											const name = getTitleName(entry);
+											const poster = entry.poster_path ? `${imageBase}/w342${entry.poster_path}` : "/placeholders/title-fallback.svg";
+											return <Link key={`series-home-${entry.id}`} href={getTitleHref(entry)} className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 p-2 transition hover:-translate-y-0.5 hover:border-sky-300/50"><span className="w-6 text-center text-lg font-black text-white/25">{String(index + 1).padStart(2, "0")}</span><div className="relative h-20 w-14 shrink-0 overflow-hidden rounded-xl"><Image alt={name} src={poster} fill sizes="56px" className="object-cover transition duration-500 group-hover:scale-105" /></div><div className="min-w-0"><p className="line-clamp-2 text-sm font-semibold text-white">{name}</p><p className="mt-1 text-xs text-white/50">{getTitleYear(entry)} · Série</p><p className="mt-1 inline-flex items-center gap-1 text-xs text-amber-200"><Star className="h-3 w-3" />{entry.vote_average?.toFixed(1) ?? "-"}</p></div></Link>;
+										})}
+									</div>
+								</div>
+
+								<div className="app-home-film-panel rounded-3xl border border-white/10 bg-white/[0.035] p-4 sm:p-5">
+									<div className="mb-4 flex items-end justify-between gap-3">
+										<div>
+											<p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-emerald-200">Novos destaques</p>
+											<h3 className="mt-1 text-2xl font-semibold text-white">Chegando agora</h3>
+											<p className="mt-1 text-sm text-white/50">Filmes e séries para descobrir primeiro.</p>
+										</div>
+										<Link href="/titles?sortBy=popularity.desc&page=1" className="text-xs font-semibold text-white/65 transition hover:text-white">Explorar</Link>
+									</div>
+									<div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+										{discoverNow.slice(0, 6).map((entry) => {
+											const name = getTitleName(entry);
+											const poster = entry.poster_path ? `${imageBase}/w342${entry.poster_path}` : "/placeholders/title-fallback.svg";
+											return <Link key={`new-home-${entry.id}`} href={getTitleHref(entry)} className="group overflow-hidden rounded-2xl border border-white/10 bg-black/20 transition hover:-translate-y-1 hover:border-emerald-300/50"><div className="relative aspect-2/3"><Image alt={name} src={poster} fill sizes="(min-width: 640px) 140px, 42vw" className="object-cover transition duration-500 group-hover:scale-105" /><div className="absolute inset-0 bg-linear-to-t from-black/90 via-transparent to-transparent" /><span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-[11px] font-semibold text-amber-200"><Star className="h-3 w-3" />{entry.vote_average?.toFixed(1) ?? "-"}</span></div><div className="p-2.5"><p className="line-clamp-1 text-xs font-semibold text-white">{name}</p><p className="mt-1 text-[11px] text-white/50">{getTitleYear(entry)} · {getTitleType(entry) === "movie" ? "Filme" : "Série"}</p></div></Link>;
 										})}
 									</div>
 								</div>
 							</div>
 
-							<aside className="space-y-4">
-								<div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-									<div className="mb-3 flex items-center justify-between">
-										<p className="text-sm font-semibold text-white">Tendências da semana</p>
-										<LineChart className="h-4 w-4 text-rose-200" />
+							<aside className="space-y-5">
+								<div className="app-home-top10 rounded-3xl border border-white/10 bg-linear-to-br from-rose-500/15 via-white/[0.04] to-sky-500/10 p-4 sm:p-5">
+									<div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+										<div>
+											<p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-rose-200">Ranking diário</p>
+											<h3 className="mt-1 text-2xl font-semibold text-white">Top 10 do dia</h3>
+											<p className="mt-1 text-sm text-white/55">Os títulos mais procurados e comentados agora.</p>
+										</div>
+										<span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-white/60">Atualizado hoje</span>
 									</div>
-									<div className="space-y-2">
-										{trending.slice(0, 5).map((movie) => (
-											<button key={movie.id} type="button" onClick={() => void openTrendingModal(movie.id)} className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left transition hover:border-rose-300/50">
-												<div><p className="text-sm font-semibold text-white">{movie.title}</p><p className="text-xs text-white/55">{movie.year}</p></div>
-												<span className="rounded-full bg-emerald-500/20 px-2 py-1 text-xs font-semibold text-emerald-200">{movie.trend}</span>
-											</button>
-										))}
-									</div>
-								</div>
-
-								<div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-									<div className="mb-3 flex items-center justify-between">
-										<p className="text-sm font-semibold text-white">Em alta</p>
-										<Link href="/titles" className="text-xs text-white/60 hover:text-white">Ver todos</Link>
-									</div>
-									<div className="space-y-3">
-										{topRated.slice(0, 3).map((entry) => {
+									<div className="grid gap-2 sm:grid-cols-2">
+										{dailyTop10.map((entry, index) => {
 											const name = getTitleName(entry);
-											const poster = entry.poster_path ? `${imageBase}/w500${entry.poster_path}` : "/placeholders/title-fallback.svg";
+											const poster = entry.poster_path ? `${imageBase}/w185${entry.poster_path}` : "/placeholders/title-fallback.svg";
 											return (
-												<Link key={`side-${entry.id}`} href={getTitleHref(entry)} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-2 transition hover:border-rose-300/50">
-													<div className="relative h-14 w-10 overflow-hidden rounded-lg"><Image alt={name} src={poster} fill sizes="40px" className="object-cover" /></div>
-													<div className="min-w-0"><p className="line-clamp-1 text-sm font-semibold text-white">{name}</p><p className="text-xs text-white/60">⭐ {entry.vote_average?.toFixed(1) ?? "-"}</p></div>
+												<Link key={`daily-top-${entry.id}-${getTitleType(entry)}`} href={getTitleHref(entry)} className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 p-2 transition hover:-translate-y-0.5 hover:border-rose-300/50">
+													<span className="app-top10-number w-10 shrink-0 text-center text-3xl font-black leading-none text-white/25">{String(index + 1).padStart(2, "0")}</span>
+													<div className="relative h-16 w-11 shrink-0 overflow-hidden rounded-lg">
+														<Image alt={name} src={poster} fill sizes="44px" className="object-cover transition duration-500 group-hover:scale-110" />
+													</div>
+													<div className="min-w-0">
+														<p className="line-clamp-1 text-sm font-semibold text-white">{name}</p>
+														<p className="mt-1 text-xs text-white/50">{getTitleYear(entry)} · {getTitleType(entry) === "movie" ? "Filme" : "Série"}</p>
+														<p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-amber-200"><Star className="h-3 w-3" />{entry.vote_average?.toFixed(1) ?? "-"}</p>
+													</div>
 												</Link>
 											);
 										})}
 									</div>
 								</div>
 
-								<div className="rounded-3xl border border-white/10 bg-white/5 p-4 text-sm text-white/75">
-									<p className="font-semibold text-white">Dados de API ativos</p>
-									<p className="mt-1">{apiSourcesCount}+ fontes, {topSearches.length + mostViewed.length + popularNow.length + discoverNow.length} títulos processados.</p>
-								</div>
-
-								<div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-									<p className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-white"><Sparkles className="h-4 w-4 text-rose-200" />Atores em alta</p>
-									<div className="space-y-2">
-										{popularPeople.slice(0, 3).map((person) => (
-											<Link key={`home-person-${person.id}`} href={`/person/${person.id}`} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/85 transition hover:border-rose-300/50">
-												<span>{person.name}</span>
-												<span className="text-xs text-white/60">{person.popularity?.toFixed(1) ?? "-"}</span>
-											</Link>
-										))}
+								<div className="app-home-moments rounded-3xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+									<div className="mb-4">
+										<p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-sky-200">Curadoria MovieDataX</p>
+										<h3 className="mt-1 text-2xl font-semibold text-white">Escolha seu próximo clima</h3>
+										<p className="mt-1 text-sm text-white/55">Três caminhos rápidos para encontrar algo especial.</p>
+									</div>
+									<div className="grid gap-3 md:grid-cols-3">
+										{discoverNow.slice(0, 3).map((entry, index) => {
+											const name = getTitleName(entry);
+											const backdrop = entry.backdrop_path ?? entry.poster_path;
+											const moments = ["Uma noite cinematográfica", "Para descobrir algo novo", "Uma história para maratonar"];
+											return (
+												<Link key={`moment-${entry.id}`} href={getTitleHref(entry)} className="group relative min-h-36 overflow-hidden rounded-2xl border border-white/10 p-4 transition hover:-translate-y-1 hover:border-sky-300/50">
+													{backdrop ? <Image alt="" src={`${imageBase}/w780${backdrop}`} fill sizes="(min-width: 768px) 30vw, 100vw" className="object-cover opacity-45 transition duration-500 group-hover:scale-105 group-hover:opacity-60" /> : null}
+													<div className="absolute inset-0 bg-linear-to-t from-black/95 via-black/55 to-black/10" />
+													<div className="relative z-10 flex h-full flex-col justify-end">
+														<p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-200">{moments[index]}</p>
+														<p className="mt-1 line-clamp-1 text-base font-semibold text-white">{name}</p>
+													</div>
+												</Link>
+											);
+										})}
 									</div>
 								</div>
 
-								<div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-									<p className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-white"><Award className="h-4 w-4 text-rose-200" />Premiações</p>
+								<div className="rounded-3xl border border-rose-300/20 bg-linear-to-br from-rose-500/15 via-white/5 to-transparent p-5 shadow-xl shadow-black/20">
+									<div className="mb-4 flex items-center justify-between">
+										<div><p className="text-base font-semibold text-white">Tendências da semana</p><p className="mt-1 text-xs text-white/50">O que todo mundo está descobrindo</p></div>
+										<LineChart className="h-5 w-5 text-rose-200" />
+									</div>
 									<div className="space-y-2">
-										{awards.slice(0, 2).map((entry) => (
-											<Link key={`home-award-${entry.id}`} href={`/title/${entry.media_type}/${entry.id}?type=${entry.media_type}&page=1`} className="block rounded-xl border border-white/10 bg-white/5 px-3 py-2 transition hover:border-rose-300/50">
-												<p className="text-sm font-semibold text-white">{entry.title}</p>
-												<p className="mt-1 text-xs text-white/60">{entry.source_awards.join(" • ")}</p>
-											</Link>
-										))}
+										{trending.slice(0, 5).map((movie, index) => {
+											const matchingTitle = [...topSearches, ...popularNow, ...mostViewed].find((entry) => entry.id === movie.id);
+											const poster = matchingTitle?.poster_path ? `${imageBase}/w185${matchingTitle.poster_path}` : "/placeholders/title-fallback.svg";
+											return (
+												<button key={movie.id} type="button" onClick={() => void openTrendingModal(movie.id)} className="group flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-black/20 p-2 text-left transition hover:border-rose-300/50 hover:bg-black/30">
+													<span className="w-4 text-center text-sm font-bold text-rose-200">{index + 1}</span>
+													<div className="relative h-14 w-10 shrink-0 overflow-hidden rounded-lg"><Image alt={movie.title} src={poster} fill sizes="40px" className="object-cover transition group-hover:scale-105" /></div>
+													<div className="min-w-0 flex-1"><p className="line-clamp-1 text-sm font-semibold text-white">{movie.title}</p><p className="text-xs text-white/50">{movie.year} · Nota {matchingTitle?.vote_average?.toFixed(1) ?? "-"}</p></div>
+													<span className="rounded-full bg-emerald-500/15 px-2 py-1 text-[11px] font-semibold text-emerald-200">{movie.trend}</span>
+												</button>
+											);
+										})}
 									</div>
 								</div>
 
-								<div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-									<p className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-white"><Clapperboard className="h-4 w-4 text-rose-200" />Diretores</p>
-									<div className="space-y-2">
-										{directors.slice(0, 3).map((entry) => (
-											<Link key={`home-director-${entry.id}`} href={`/title/movie/${entry.id}?type=movie&page=1`} className="block rounded-xl border border-white/10 bg-white/5 px-3 py-2 transition hover:border-rose-300/50">
-												<p className="text-sm font-semibold text-white">{entry.director}</p>
-												<p className="mt-1 text-xs text-white/60">{entry.title}</p>
-											</Link>
-										))}
+								<div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+									<div className="mb-4 flex items-center justify-between"><div><p className="text-base font-semibold text-white">Melhores avaliações</p><p className="mt-1 text-xs text-white/50">Notas que valem seu tempo</p></div><Star className="h-5 w-5 text-amber-300" /></div>
+									<div className="space-y-3">
+										{topRated.slice(0, 5).map((entry, index) => {
+											const name = getTitleName(entry);
+											const poster = entry.poster_path ? `${imageBase}/w185${entry.poster_path}` : "/placeholders/title-fallback.svg";
+											return <Link key={`side-${entry.id}`} href={getTitleHref(entry)} className="group flex items-center gap-3"><span className="w-4 text-sm font-bold text-white/35">{index + 1}</span><div className="relative h-16 w-11 shrink-0 overflow-hidden rounded-lg"><Image alt={name} src={poster} fill sizes="44px" className="object-cover transition group-hover:scale-105" /></div><div className="min-w-0"><p className="line-clamp-2 text-sm font-semibold text-white group-hover:text-rose-100">{name}</p><p className="mt-1 inline-flex items-center gap-1 text-xs text-amber-200"><Star className="h-3 w-3" />{entry.vote_average?.toFixed(1) ?? "-"}</p></div></Link>;
+										})}
 									</div>
+								</div>
+
+								<div className="app-home-film-panel rounded-3xl border border-white/10 bg-white/5 p-5">
+									<div className="mb-4 flex items-center justify-between">
+										<div><p className="text-base font-semibold text-white">Filmes para maratonar</p><p className="mt-1 text-xs text-white/50">Uma seleção pronta para sua próxima sessão</p></div>
+										<Clapperboard className="h-5 w-5 text-rose-200" />
+									</div>
+									<div className="grid gap-3">
+										{mostViewed.slice(0, 5).map((entry, index) => {
+											const name = getTitleName(entry);
+											const poster = entry.poster_path ? `${imageBase}/w185${entry.poster_path}` : "/placeholders/title-fallback.svg";
+											return <Link key={`marathon-${entry.id}`} href={getTitleHref(entry)} className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-black/15 p-2 transition hover:-translate-y-0.5 hover:border-rose-300/40"><span className="w-5 text-center text-sm font-black text-white/30">{String(index + 1).padStart(2, "0")}</span><div className="relative h-20 w-14 shrink-0 overflow-hidden rounded-xl"><Image alt={name} src={poster} fill sizes="56px" className="object-cover transition group-hover:scale-105" /></div><div className="min-w-0"><p className="line-clamp-1 text-sm font-semibold text-white">{name}</p><p className="mt-1 text-xs text-white/50">{getTitleYear(entry)} · {getTitleType(entry) === "movie" ? "Filme" : "Série"}</p><p className="mt-1 inline-flex items-center gap-1 text-xs text-amber-200"><Star className="h-3 w-3" />{entry.vote_average?.toFixed(1) ?? "-"}</p></div></Link>;
+										})}
+									</div>
+								</div>
+
+								<div className="app-home-film-panel rounded-3xl border border-white/10 bg-white/5 p-5">
+									<div className="mb-4 flex items-center justify-between">
+										<div><p className="text-base font-semibold text-white">Favoritos do público</p><p className="mt-1 text-xs text-white/50">Os títulos que mais conquistaram espectadores</p></div>
+										<Users className="h-5 w-5 text-sky-200" />
+									</div>
+									<div className="grid grid-cols-2 gap-3">
+										{publicFavorites.slice(0, 6).map((entry) => {
+											const name = getTitleName(entry);
+											const poster = entry.poster_path ? `${imageBase}/w342${entry.poster_path}` : "/placeholders/title-fallback.svg";
+											return <Link key={`public-favorite-${entry.id}`} href={getTitleHref(entry)} className="group overflow-hidden rounded-2xl border border-white/10 bg-black/15 transition hover:-translate-y-1 hover:border-sky-300/40"><div className="relative aspect-2/3"><Image alt={name} src={poster} fill sizes="140px" className="object-cover transition duration-500 group-hover:scale-105" /><div className="absolute inset-0 bg-linear-to-t from-black/90 via-transparent to-transparent" /><span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-1 text-[11px] font-semibold text-amber-200"><Star className="h-3 w-3" />{entry.vote_average?.toFixed(1) ?? "-"}</span></div><div className="p-2.5"><p className="line-clamp-1 text-xs font-semibold text-white">{name}</p><p className="mt-1 text-[11px] text-white/50">{getTitleYear(entry)}</p></div></Link>;
+										})}
+									</div>
+								</div>
+
+								<div className="app-home-film-panel rounded-3xl border border-white/10 bg-white/5 p-5">
+									<div className="mb-4 flex items-center justify-between">
+										<div><p className="text-base font-semibold text-white">Sessão em família</p><p className="mt-1 text-xs text-white/50">Títulos leves para assistir juntos</p></div>
+										<Sparkles className="h-5 w-5 text-amber-200" />
+									</div>
+									<div className="space-y-3">
+										{kidsNow.slice(0, 5).map((entry) => {
+											const name = getTitleName(entry);
+											const poster = entry.poster_path ? `${imageBase}/w185${entry.poster_path}` : "/placeholders/title-fallback.svg";
+											return <Link key={`family-${entry.id}`} href={getTitleHref(entry)} className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-black/15 p-2 transition hover:-translate-y-0.5 hover:border-amber-300/40"><div className="relative h-16 w-11 shrink-0 overflow-hidden rounded-lg"><Image alt={name} src={poster} fill sizes="44px" className="object-cover transition group-hover:scale-105" /></div><div className="min-w-0"><p className="line-clamp-1 text-sm font-semibold text-white">{name}</p><p className="mt-1 text-xs text-white/50">{getTitleYear(entry)} · {getTitleType(entry) === "movie" ? "Filme" : "Série"}</p><p className="mt-1 text-xs text-amber-200">Nota {entry.vote_average?.toFixed(1) ?? "-"}</p></div></Link>;
+										})}
+									</div>
+								</div>
+
+								<div className="relative overflow-hidden rounded-3xl border border-white/10 bg-linear-to-br from-sky-500/15 via-white/[0.04] to-rose-500/15 p-5 text-sm text-white/75">
+									<div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-rose-300/10 blur-2xl" />
+									<p className="relative text-[11px] font-semibold uppercase tracking-[0.22em] text-sky-200">Para sua próxima sessão</p>
+									<p className="relative mt-2 text-lg font-semibold text-white">Seu radar de cinema</p>
+									<p className="relative mt-1 leading-relaxed">Descubra títulos populares, novidades e histórias que combinam com o seu momento.</p>
+									<Link href="/titles" className="relative mt-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-rose-100 transition hover:bg-white/20 hover:text-white">Explorar catálogo <ArrowUpRight className="h-3.5 w-3.5" /></Link>
 								</div>
 							</aside>
 						</motion.div>

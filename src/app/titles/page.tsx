@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { motion, type Variants } from "framer-motion";
-import { ArrowLeft, ChevronLeft, ChevronRight, Film, Search, Star, Tv } from "lucide-react";
+import { ChevronLeft, ChevronRight, Film, Search, SlidersHorizontal, Star, Tv } from "lucide-react";
 
 type TmdbListItem = {
 	id: number;
@@ -31,6 +31,11 @@ type GenreResponse = {
 	genres: TmdbGenre[];
 };
 
+type SortOption = {
+	value: string;
+	label: string;
+};
+
 type DiscoverResponse = {
 	page: number;
 	results: TmdbListItem[];
@@ -53,6 +58,12 @@ const item: Variants = {
 };
 
 const imageBase = "https://image.tmdb.org/t/p";
+const sortOptions: SortOption[] = [
+	{ value: "popularity.desc", label: "Mais populares" },
+	{ value: "vote_average.desc", label: "Melhor avaliados" },
+	{ value: "primary_release_date.desc", label: "Mais recentes" },
+	{ value: "primary_release_date.asc", label: "Mais antigos" },
+];
 
 function TitlesPageContent() {
 	const router = useRouter();
@@ -62,6 +73,11 @@ function TitlesPageContent() {
 	const mediaType: "movie" | "tv" =
 		searchParams.get("type") === "tv" ? "tv" : "movie";
 	const genreParam = searchParams.get("genre");
+	const minRatingParam = Number(searchParams.get("minRating") ?? 0);
+	const minYearParam = Number(searchParams.get("minYear") ?? 0);
+	const maxYearParam = Number(searchParams.get("maxYear") ?? 0);
+	const sortBy = searchParams.get("sortBy") ?? "popularity.desc";
+	const minVotesParam = Number(searchParams.get("minVotes") ?? 0);
 	const pageParam = Number(searchParams.get("page") ?? 1);
 	const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
 
@@ -86,10 +102,6 @@ function TitlesPageContent() {
 		[genres, selectedGenreId]
 	);
 
-	const handleBack = () => {
-		router.push("/");
-	};
-
 	const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 		const trimmed = searchTitle.trim();
@@ -99,11 +111,25 @@ function TitlesPageContent() {
 		router.push(`/search?q=${encodeURIComponent(trimmed)}`);
 	};
 
-	const updateQuery = (next: { type?: "movie" | "tv"; genre?: number; page?: number }) => {
+	const updateQuery = (next: {
+		type?: "movie" | "tv";
+		genre?: number;
+		page?: number;
+		minRating?: number;
+		minYear?: number;
+		maxYear?: number;
+		sortBy?: string;
+		minVotes?: number;
+	}) => {
 		const params = new URLSearchParams(searchParamsString);
 		const nextType = next.type ?? mediaType;
 		const nextGenre = next.genre ?? selectedGenreId;
 		const nextPage = next.page ?? page;
+		const nextMinRating = next.minRating ?? (Number.isFinite(minRatingParam) ? minRatingParam : 0);
+		const nextMinYear = next.minYear ?? (Number.isFinite(minYearParam) ? minYearParam : 0);
+		const nextMaxYear = next.maxYear ?? (Number.isFinite(maxYearParam) ? maxYearParam : 0);
+		const nextSortBy = next.sortBy ?? sortBy;
+		const nextMinVotes = next.minVotes ?? (Number.isFinite(minVotesParam) ? minVotesParam : 0);
 
 		params.set("type", nextType);
 		if (nextGenre) {
@@ -112,6 +138,31 @@ function TitlesPageContent() {
 			params.delete("genre");
 		}
 		params.set("page", String(nextPage));
+		if (nextMinRating > 0) {
+			params.set("minRating", String(nextMinRating));
+		} else {
+			params.delete("minRating");
+		}
+		if (nextMinYear > 0) {
+			params.set("minYear", String(nextMinYear));
+		} else {
+			params.delete("minYear");
+		}
+		if (nextMaxYear > 0) {
+			params.set("maxYear", String(nextMaxYear));
+		} else {
+			params.delete("maxYear");
+		}
+		if (nextSortBy !== "popularity.desc") {
+			params.set("sortBy", nextSortBy);
+		} else {
+			params.delete("sortBy");
+		}
+		if (nextMinVotes > 0) {
+			params.set("minVotes", String(nextMinVotes));
+		} else {
+			params.delete("minVotes");
+		}
 
 		router.push(`/titles?${params.toString()}`);
 	};
@@ -183,10 +234,9 @@ function TitlesPageContent() {
 
 		const loadTitles = async () => {
 			try {
-				const response = await fetch(
-					`/api/imdb/discover?type=${mediaType}&genre=${selectedGenreId}&page=${page}`,
-					{ signal: controller.signal }
-				);
+				const requestUrl = (requestedPage: number) =>
+					`/api/imdb/discover?type=${mediaType}&genre=${selectedGenreId}&page=${requestedPage}&minRating=${minRatingParam}&minYear=${minYearParam}&maxYear=${maxYearParam}&sortBy=${encodeURIComponent(sortBy)}&minVotes=${minVotesParam}`;
+				const response = await fetch(requestUrl(page), { signal: controller.signal });
 				if (!response.ok) {
 					throw new Error("Failed to load titles");
 				}
@@ -205,8 +255,29 @@ function TitlesPageContent() {
 					return;
 				}
 
+				const pagesToLoad = [page + 1, page + 2, page + 3].filter(
+					(requestedPage) => requestedPage <= resolvedTotalPages
+				);
+				const additionalResponses = await Promise.all(
+					pagesToLoad.map((requestedPage) =>
+						fetch(requestUrl(requestedPage), { signal: controller.signal })
+					)
+				);
+				const additionalData = await Promise.all(
+					additionalResponses
+						.filter((additionalResponse) => additionalResponse.ok)
+						.map((additionalResponse) => additionalResponse.json() as Promise<DiscoverResponse>)
+				);
+				const combinedResults = [
+					...(data.results ?? []),
+					...additionalData.flatMap((pageData) => pageData.results ?? []),
+				];
+				const uniqueResults = combinedResults.filter(
+					(entry, index, list) => list.findIndex((candidate) => candidate.id === entry.id) === index
+				);
+
 				setTitles(
-					(data.results ?? []).map((entry) => ({
+					uniqueResults.map((entry) => ({
 						...entry,
 						media_type: mediaType,
 					}))
@@ -231,133 +302,92 @@ function TitlesPageContent() {
 		return () => {
 			controller.abort();
 		};
-	}, [mediaType, page, router, searchParamsString, selectedGenreId]);
+	}, [maxYearParam, mediaType, minRatingParam, minYearParam, minVotesParam, page, router, searchParamsString, selectedGenreId, sortBy]);
 
 	const getTitleName = (entry: TmdbListItem) => entry.title ?? entry.name ?? "-";
 	const getTitleYear = (entry: TmdbListItem) =>
 		entry.release_date?.slice(0, 4) ?? entry.first_air_date?.slice(0, 4) ?? "-";
+	const filterContextLabel = selectedGenre?.name ?? (mediaType === "movie" ? "Filmes" : "Séries");
+	const activeFilterDescription = [
+		minRatingParam > 0 ? `nota ${minRatingParam}+` : "",
+		minYearParam > 0 || maxYearParam > 0 ? `${minYearParam || "qualquer"}–${maxYearParam || "agora"}` : "",
+		sortOptions.find((option) => option.value === sortBy)?.label ?? "",
+	]
+		.filter(Boolean)
+		.join(" · ");
+	const recommendationGroups = [
+		{
+			key: "highlights",
+			label: "Destaques selecionados",
+			description: `Os melhores resultados em ${filterContextLabel.toLowerCase()}.`,
+			entries: titles.slice(0, 6),
+			accent: "text-rose-200",
+		},
+		{
+			key: "ratings",
+			label: "Notas que se destacam",
+			description: "Títulos para assistir sem perder tempo.",
+			entries: [...titles].sort((a, b) => (b.vote_average ?? 0) - (a.vote_average ?? 0)).slice(0, 5),
+			accent: "text-amber-200",
+		},
+		{
+			key: "discover",
+			label: "Descobertas para hoje",
+			description: activeFilterDescription || "Uma seleção para sair do óbvio.",
+			entries: titles.slice(6, 12),
+			accent: "text-sky-200",
+		},
+	];
 
 	return (
 		<main className="app-internal-page min-h-screen text-white">
-			<section className="relative overflow-hidden px-6 pb-10 pt-16 sm:px-10 lg:px-16">
+			<section className="relative overflow-hidden px-6 pb-8 pt-8 sm:px-10 lg:px-16">
 				<div className="app-internal-hero-bg absolute inset-0" />
 				<div className="app-internal-hero-glow absolute inset-x-0 top-20 h-40 blur-3xl" />
 
 				<motion.div
-					className="relative mx-auto grid max-w-6xl gap-6"
+					className="relative mx-auto grid max-w-7xl gap-4"
 					variants={container}
 					initial="hidden"
 					animate="show"
 				>
-					<motion.div className="flex flex-wrap items-center gap-3" variants={item}>
-						<button
-							type="button"
-							onClick={handleBack}
-							className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/70 transition hover:text-white"
-						>
-							<ArrowLeft className="h-4 w-4" />
-							Voltar
-						</button>
-						<span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase text-rose-200">
-							Catálogo
-						</span>
-					</motion.div>
-
-					<motion.div className="grid gap-4" variants={item}>
-						<h1 className="text-3xl font-semibold text-white sm:text-4xl">
-							{mediaType === "movie" ? "Filmes por categoria" : "Séries por categoria"}
+					<motion.div className="mx-auto grid max-w-3xl justify-items-center gap-3 text-center" variants={item}>
+						<div className="flex items-center gap-3">
+							<span className="h-px w-10 bg-rose-400/70 sm:w-16" />
+							<span className="text-[11px] font-semibold uppercase tracking-[0.3em] text-rose-200/80">
+								Catálogo MovieDataX
+							</span>
+							<span className="h-px w-10 bg-rose-400/70 sm:w-16" />
+						</div>
+						<h1 className="text-4xl font-semibold leading-tight tracking-tight text-white sm:text-6xl">
+							{mediaType === "movie" ? "Filmes" : "Séries"}
 						</h1>
-						<p className="text-sm text-white/60">
-							Clique em uma categoria e navegue pelas páginas dos títulos.
+						<p className="max-w-xl text-sm leading-6 text-white/55 sm:text-base">
+							Explore títulos por categoria e encontre sua próxima sessão.
 						</p>
 
-						<form
-							onSubmit={handleSearchSubmit}
-							className="flex w-full max-w-xl items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 sm:rounded-full"
-						>
-							<Search className="h-4 w-4 text-rose-200" />
-							<input
-								type="text"
-								value={searchTitle}
-								onChange={(event) => setSearchTitle(event.target.value)}
-								placeholder="Pesquisar título (filme ou série)"
-								className="w-full bg-transparent text-base text-white/85 placeholder:text-white/40 focus:outline-none sm:text-sm"
-							/>
-							<button
-								type="submit"
-								className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-rose-600 px-4 text-[11px] font-semibold uppercase tracking-[0.14em] leading-none text-white transition hover:bg-rose-500 sm:text-xs sm:tracking-[0.18em]"
-							>
-								Buscar
-							</button>
-						</form>
-
-						<div className="flex flex-wrap gap-3">
-							<button
-								type="button"
-								onClick={() => updateQuery({ type: "movie", page: 1 })}
-								className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-									mediaType === "movie"
-										? "bg-rose-500/30 text-rose-100"
-										: "border border-white/10 bg-white/5 text-white/70 hover:text-white"
-								}`}
-							>
-								<Film className="h-4 w-4" />
-								Filmes
-							</button>
-							<button
-								type="button"
-								onClick={() => updateQuery({ type: "tv", page: 1 })}
-								className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-									mediaType === "tv"
-										? "bg-rose-500/30 text-rose-100"
-										: "border border-white/10 bg-white/5 text-white/70 hover:text-white"
-								}`}
-							>
-								<Tv className="h-4 w-4" />
-								Séries
-							</button>
-						</div>
-
-						{genresLoading ? (
-							<div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70">
-								Carregando categorias...
-							</div>
-						) : (
-							<div className="flex flex-wrap gap-2">
-								{genres.map((genre) => (
-									<button
-										key={genre.id}
-										type="button"
-										onClick={() => updateQuery({ genre: genre.id, page: 1 })}
-										className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-											selectedGenreId === genre.id
-												? "bg-rose-500/30 text-rose-100"
-												: "border border-white/10 bg-white/5 text-white/70 hover:text-white"
-										}`}
-									>
-										{genre.name}
-									</button>
-								))}
-							</div>
-						)}
 					</motion.div>
 				</motion.div>
 			</section>
 
 			<section className="relative z-10 px-6 pb-20 sm:px-10 lg:px-16">
 				<motion.div
-					className="mx-auto grid max-w-6xl gap-6"
+					className="mx-auto grid max-w-7xl gap-7 lg:grid-cols-[minmax(0,1fr)_27rem]"
 					variants={container}
 					initial="hidden"
 					animate="show"
 				>
-					<motion.div className="flex flex-wrap items-center justify-between gap-3" variants={item}>
-						<div>
-							<p className="text-sm font-semibold uppercase tracking-[0.3em] text-rose-200">
-								{selectedGenre?.name ?? "Categoria"}
+					<motion.div className="order-2 min-w-0 lg:order-1" variants={item}>
+						<div className="mb-5 flex flex-wrap items-end justify-between gap-4 border-b border-white/10 pb-4">
+						<div className="space-y-1">
+							<p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-rose-200/75">
+								Categoria selecionada
 							</p>
-							<p className="mt-2 text-sm text-white/60">
-								{totalResults} títulos encontrados • Página {page} de {totalPages}
+							<h2 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
+								{selectedGenre?.name ?? "Categoria"}
+							</h2>
+							<p className="text-xs text-white/50 sm:text-sm">
+								{totalResults} títulos encontrados <span className="mx-1 text-white/25">•</span> Página {page} de {totalPages}
 							</p>
 						</div>
 						<div className="flex items-center gap-2">
@@ -380,62 +410,53 @@ function TitlesPageContent() {
 								<ChevronRight className="h-4 w-4" />
 							</button>
 						</div>
-					</motion.div>
+						</div>
 
 					{titlesLoading ? (
 						<div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/70">
 							Carregando títulos da categoria...
 						</div>
 					) : (
-						<div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:grid sm:snap-none sm:overflow-visible sm:pb-0 sm:gap-3 sm:grid-cols-2 lg:grid-cols-4">
-							{titles.map((entry, index) => {
+						<div className="grid items-start gap-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+							{titles.map((entry) => {
 								const name = getTitleName(entry);
 								const year = getTitleYear(entry);
 								const poster = entry.poster_path
 									? `${imageBase}/w500${entry.poster_path}`
 									: "/placeholders/title-fallback.svg";
 
-								if (index < 3) {
-								}
-
 								return (
 									<div
 										key={entry.id}
-										className="app-category-card group w-30 shrink-0 snap-start overflow-hidden rounded-2xl border transition duration-300 hover:-translate-y-1 sm:w-auto"
+										className="app-category-card group self-start overflow-hidden rounded-2xl border transition duration-300 hover:-translate-y-1"
 									>
 										<Link
 											href={`/title/${mediaType}/${entry.id}?type=${mediaType}&genre=${selectedGenreId ?? ""}&page=${page}`}
 											className="block"
 										>
-											<div className="app-category-poster relative aspect-2/3">
+											<div className="app-category-poster relative aspect-[2/3]">
 												<Image
 													alt={name}
 													src={poster}
 													fill
-													sizes="(min-width: 1024px) 11rem, (min-width: 640px) 40vw, 70vw"
+													sizes="(min-width: 1280px) 14rem, (min-width: 1024px) 17vw, (min-width: 640px) 22vw, 42vw"
 													className="app-category-poster-image object-cover"
-													onLoad={() => {
-														if (index < 3) {
-														}
-													}}
-													onError={() => {
-													}}
 												/>
 											</div>
-											<div className="space-y-2 p-2.5 sm:p-3">
-												<p className="app-category-title line-clamp-2 min-h-9 text-[11px] font-semibold sm:text-sm">{name}</p>
-												<div className="flex flex-wrap items-center gap-1 text-[10px] sm:gap-1.5 sm:text-xs">
-													<span className="app-main-poster-chip rounded-full px-2 py-0.5 font-semibold">{year}</span>
-													<span className="app-main-poster-chip rounded-full px-2 py-0.5 font-semibold">
+											<div className="space-y-1.5 p-2.5">
+												<p className="app-category-title line-clamp-2 min-h-8 text-xs font-semibold sm:text-sm">{name}</p>
+												<div className="flex flex-wrap items-center gap-1 text-[9px] sm:text-[10px]">
+													<span className="app-main-poster-chip rounded-full px-1.5 py-0.5 font-semibold">{year}</span>
+													<span className="app-main-poster-chip rounded-full px-1.5 py-0.5 font-semibold">
 														{mediaType === "movie" ? "Filme" : "Série"}
 													</span>
-													<span className="app-main-poster-chip app-rating-chip inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold">
-														<Star className="h-3 w-3" />
+													<span className="app-main-poster-chip app-rating-chip inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 font-semibold">
+														<Star className="h-2.5 w-2.5" />
 														{entry.vote_average?.toFixed(1) ?? "-"}
 													</span>
 												</div>
-												<p className="app-category-hint text-[10px] font-semibold uppercase tracking-[0.2em] sm:text-[11px]">
-													Clique para ver detalhes completos
+												<p className="app-category-hint text-[9px] font-semibold uppercase tracking-[0.12em] sm:text-[10px]">
+													Ver detalhes
 												</p>
 											</div>
 										</Link>
@@ -445,12 +466,132 @@ function TitlesPageContent() {
 							})}
 
 							{titles.length === 0 && (
-								<div className="w-full rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/70 sm:col-span-2 lg:col-span-4">
+								<div className="w-full rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/70 sm:col-span-4 lg:col-span-5 xl:col-span-6">
 									Nenhum título encontrado nessa categoria.
 								</div>
 							)}
 						</div>
 					)}
+					</motion.div>
+					<aside className="app-filter-panel order-1 h-fit rounded-[2rem] border p-6 shadow-2xl lg:sticky lg:top-6 lg:order-2 lg:p-8">
+						<div className="app-filter-header mb-6 rounded-2xl border p-4">
+							<div className="flex items-start gap-3">
+								<div className="app-filter-icon rounded-2xl p-2.5"><SlidersHorizontal className="h-5 w-5" /></div>
+								<div>
+								<p className="text-lg font-semibold text-white">Encontrar títulos</p>
+								<p className="mt-1 text-sm text-white/55">Monte sua sessão ideal.</p>
+								</div>
+							</div>
+							<form onSubmit={handleSearchSubmit} className="app-filter-search mt-4 flex items-center gap-2 rounded-xl border p-2">
+								<Search className="ml-2 h-4 w-4 shrink-0 text-rose-200" />
+								<input
+									type="text"
+									value={searchTitle}
+									onChange={(event) => setSearchTitle(event.target.value)}
+									placeholder="Buscar filme ou série"
+									aria-label="Buscar filme ou série"
+									className="min-w-0 flex-1 bg-transparent px-1 py-2 text-sm text-white/85 placeholder:text-white/40 outline-none"
+								/>
+								<button
+									type="submit"
+									aria-label="Pesquisar título"
+									title="Pesquisar título"
+									className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-600 text-white transition hover:bg-rose-500"
+								>
+									<Search className="h-4 w-4" />
+								</button>
+							</form>
+						</div>
+						<div className="space-y-3">
+							<div className="app-filter-section">
+								<p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-white/50">Exibir</p>
+								<div className="grid grid-cols-2 gap-2">
+									{(["movie", "tv"] as const).map((type) => (
+										<button key={type} type="button" onClick={() => updateQuery({ type, page: 1 })} className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-medium transition ${mediaType === type ? "border-rose-400/50 bg-rose-500/20 text-rose-100" : "border-white/10 bg-white/5 text-white/60 hover:border-white/25 hover:text-white"}`}>
+											{type === "movie" ? <Film className="h-4 w-4" /> : <Tv className="h-4 w-4" />}
+											{type === "movie" ? "Filmes" : "Séries"}
+										</button>
+									))}
+								</div>
+							</div>
+							<div className="app-filter-section">
+								<label htmlFor="min-votes" className="mb-3 block text-xs font-semibold uppercase tracking-[0.18em] text-white/50">Confiabilidade da nota</label>
+								<select id="min-votes" value={minVotesParam} onChange={(event) => updateQuery({ minVotes: Number(event.target.value), page: 1 })} className="app-filter-control w-full rounded-xl border border-white/10 bg-[#181821] px-3 py-3 text-sm text-white/80 outline-none">
+									<option value="0">Todos os títulos</option>
+									<option value="100">Pelo menos 100 votos</option>
+									<option value="500">Pelo menos 500 votos</option>
+									<option value="1000">Pelo menos 1.000 votos</option>
+								</select>
+								<p className="mt-2 text-xs leading-relaxed text-white/45">Evite notas baseadas em poucas avaliações.</p>
+							</div>
+							<div className="app-filter-section">
+								<label htmlFor="sort-by" className="mb-3 block text-xs font-semibold uppercase tracking-[0.18em] text-white/50">Ordenar resultados</label>
+								<select id="sort-by" value={sortBy} onChange={(event) => updateQuery({ sortBy: event.target.value, page: 1 })} className="app-filter-control w-full rounded-xl border border-white/10 bg-[#181821] px-3 py-3 text-sm text-white/80 outline-none">
+									{sortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+								</select>
+							</div>
+							<div className="app-filter-section">
+								<label htmlFor="min-rating" className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-white/50"><span>Nota mínima</span><strong className="text-sm tracking-normal text-rose-200">{minRatingParam ? `${minRatingParam}/10` : "Qualquer"}</strong></label>
+								<input id="min-rating" type="range" min="0" max="9" step="0.5" value={minRatingParam} onChange={(event) => updateQuery({ minRating: Number(event.target.value), page: 1 })} className="w-full accent-rose-500" />
+							</div>
+							<div className="app-filter-section grid grid-cols-2 gap-2">
+								<label className="text-xs text-white/50">De<input type="number" min="1900" max="2100" value={minYearParam || ""} placeholder="Ano" onChange={(event) => updateQuery({ minYear: Number(event.target.value) || 0, page: 1 })} className="app-filter-control mt-2 w-full rounded-xl border border-white/10 bg-[#181821] px-3 py-3 text-sm text-white/80 outline-none" /></label>
+								<label className="text-xs text-white/50">Até<input type="number" min="1900" max="2100" value={maxYearParam || ""} placeholder="Ano" onChange={(event) => updateQuery({ maxYear: Number(event.target.value) || 0, page: 1 })} className="app-filter-control mt-2 w-full rounded-xl border border-white/10 bg-[#181821] px-3 py-3 text-sm text-white/80 outline-none" /></label>
+							</div>
+							<div className="app-filter-section">
+								<p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-white/50">Gênero</p>
+								{genresLoading ? <p className="text-sm text-white/50">Carregando gêneros...</p> : <div className="grid max-h-96 grid-cols-2 gap-2 overflow-y-auto pr-1">{genres.map((genre) => <button key={genre.id} type="button" onClick={() => updateQuery({ genre: genre.id, page: 1 })} className={`rounded-xl border px-3 py-2.5 text-left text-sm transition ${selectedGenreId === genre.id ? "border-rose-400/50 bg-rose-500/20 font-medium text-rose-100" : "border-white/10 bg-white/[0.03] text-white/65 hover:border-white/25 hover:bg-white/[0.08] hover:text-white"}`}>{genre.name}</button>)}</div>}
+							</div>
+							<button type="button" onClick={() => updateQuery({ genre: genres[0]?.id, minRating: 0, minYear: 0, maxYear: 0, minVotes: 0, sortBy: "popularity.desc", page: 1 })} className="w-full rounded-xl border border-white/10 px-3 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-white/60 transition hover:border-rose-300/30 hover:text-white">Limpar filtros</button>
+						</div>
+						<div className="app-filter-recommendations mt-5 border-t border-white/10 pt-5">
+							<div className="mb-4">
+								<p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-rose-200">Curadoria dinâmica</p>
+								<p className="mt-1 text-sm font-semibold text-white">{filterContextLabel} para explorar</p>
+								<p className="mt-1 text-xs leading-relaxed text-white/50">
+									As sugestões mudam conforme seus filtros.
+								</p>
+							</div>
+							<div className="space-y-5">
+								{recommendationGroups.map((group) => (
+									<div key={group.key}>
+										<div className="mb-2 flex items-center justify-between gap-2">
+											<div>
+												<p className={`text-xs font-semibold ${group.accent}`}>{group.label}</p>
+												<p className="mt-0.5 text-[11px] text-white/45">{group.description}</p>
+											</div>
+											<Star className="h-3.5 w-3.5 shrink-0 text-amber-300" />
+										</div>
+										<div className="space-y-2">
+											{group.entries.map((entry, index) => {
+												const name = getTitleName(entry);
+												const poster = entry.poster_path ? `${imageBase}/w185${entry.poster_path}` : "/placeholders/title-fallback.svg";
+												return (
+													<Link
+														key={`${group.key}-${entry.id}`}
+														href={`/title/${mediaType}/${entry.id}?type=${mediaType}&genre=${selectedGenreId ?? ""}&page=${page}`}
+														className="app-filter-recommendation group flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.03] p-2 transition hover:-translate-y-0.5 hover:border-rose-300/40"
+													>
+														<span className="w-5 shrink-0 text-center text-xs font-black text-white/30">{String(index + 1).padStart(2, "0")}</span>
+														<div className="relative h-14 w-10 shrink-0 overflow-hidden rounded-lg">
+															<Image alt={name} src={poster} fill sizes="40px" className="object-cover transition duration-500 group-hover:scale-105" />
+														</div>
+														<div className="min-w-0">
+															<p className="line-clamp-1 text-xs font-semibold text-white">{name}</p>
+															<p className="mt-1 inline-flex items-center gap-1 text-[11px] text-amber-200">
+																<Star className="h-3 w-3" />
+																{entry.vote_average?.toFixed(1) ?? "-"}
+															</p>
+														</div>
+													</Link>
+												);
+											})}
+										</div>
+									</div>
+								))}
+							</div>
+						</div>
+					</aside>
 				</motion.div>
 			</section>
 		</main>
