@@ -43,6 +43,7 @@ type TmdbListItem = {
 	name?: string;
 	overview?: string;
 	vote_average?: number;
+	popularity?: number;
 	release_date?: string;
 	first_air_date?: string;
 	genre_ids?: number[];

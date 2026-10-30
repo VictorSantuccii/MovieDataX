@@ -71,7 +71,6 @@ export default function PeoplePage() {
 				if (!controller.signal.aborted) {
 					setPeople([]);
 					setTotalPages(1);
-					setTotalResults(0);
 				}
 			} finally {
 				if (!controller.signal.aborted) {
